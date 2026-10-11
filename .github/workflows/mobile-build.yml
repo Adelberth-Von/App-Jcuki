@@ -61,7 +61,7 @@ jobs:
           java-version: "17"
       - run: npm ci
       - name: Set up Android command-line tools
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Install the Android build dependencies
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
       - name: Generate native Android project from Expo config
@@ -86,7 +86,7 @@ jobs:
           apk='android/app/build/outputs/apk/release/app-release.apk'
           test -f "$apk"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
-          minimum="$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest min-sdk "$apk")"
+          minimum="$(apkanalyzer manifest min-sdk "$apk")"
           test "$minimum" = '33'
           mkdir -p artifacts
           cp "$apk" artifacts/JCuki-Android13-preview.apk
