@@ -3,29 +3,32 @@
     "name": "JCuki",
     "slug": "jcuki",
     "scheme": "jcuki",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F6F6FA",
+    "backgroundColor": "#F7F8F5",
     "locales": {
       "id": "./assets/locales/id.json",
       "en": "./assets/locales/en.json"
     },
     "ios": {
       "bundleIdentifier": "com.terrence.jcuki",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "infoPlist": {
-        "CFBundleLocalizations": ["id", "en"],
+        "CFBundleLocalizations": [
+          "id",
+          "en"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.terrence.jcuki",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#5B51D8",
+        "backgroundColor": "#185F50",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -70,10 +73,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 140,
           "resizeMode": "contain",
-          "backgroundColor": "#F6F6FA",
+          "backgroundColor": "#F7F8F5",
           "dark": {
             "image": "./assets/splash-icon-dark.png",
-            "backgroundColor": "#12131C"
+            "backgroundColor": "#101A16"
           }
         }
       ],
@@ -81,9 +84,11 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#5B51D8",
+          "color": "#185F50",
           "defaultChannel": "jcuki-reminders-v1",
-          "sounds": ["./assets/sounds/jcuki_chime.wav"]
+          "sounds": [
+            "./assets/sounds/jcuki_chime.wav"
+          ]
         }
       ],
       [
@@ -93,17 +98,17 @@
           "cameraPermission": false,
           "microphonePermission": false,
           "colors": {
-            "cropToolbarColor": "#5B51D8",
+            "cropToolbarColor": "#185F50",
             "cropToolbarIconColor": "#FFFFFF",
             "cropToolbarActionTextColor": "#FFFFFF",
-            "cropBackgroundColor": "#F6F6FA"
+            "cropBackgroundColor": "#F7F8F5"
           },
           "dark": {
             "colors": {
-              "cropToolbarColor": "#1C1E2A",
-              "cropToolbarIconColor": "#F3F3FA",
-              "cropToolbarActionTextColor": "#ACA6FF",
-              "cropBackgroundColor": "#12131C"
+              "cropToolbarColor": "#192720",
+              "cropToolbarIconColor": "#F1F6F0",
+              "cropToolbarActionTextColor": "#8FDAB5",
+              "cropBackgroundColor": "#101A16"
             }
           }
         }
@@ -117,10 +122,13 @@
           "widgets": [
             {
               "name": "JCukiAgenda",
-              "displayName": "JCuki agenda",
-              "description": "Your next shared plan in your local time.",
+              "displayName": "JCuki days off",
+              "description": "Your next confirmed day off and optional playing hours.",
               "ios": {
-                "supportedFamilies": ["systemSmall", "systemMedium"]
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ]
               }
             }
           ]

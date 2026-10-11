@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -12,7 +12,9 @@ import * as Notifications from "expo-notifications";
 import { AppProvider, useApp } from "../store";
 import { LoadingScreen, Toast } from "../components/ui";
 import { OverlayHost } from "../components/overlays";
-import { eventState } from "../lib/domain";
+import { localDate, playingSlots } from "../lib/domain";
+import { dayText } from "../components/schedule";
+import { useMinuteClock } from "../hooks/useMinuteClock";
 import { syncAgendaWidget } from "../services/widget";
 
 function AppShell() {
@@ -22,7 +24,7 @@ function AppShell() {
     t,
     group,
     profile,
-    date,
+    prefs,
     time,
     widgetEnabled,
     setOverlay,
@@ -35,26 +37,52 @@ function AppShell() {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+  const now = useMinuteClock();
+  const lastWidgetPayload = useRef("");
   useEffect(() => {
     if (!ready) return;
+    const own = group?.members.find((m) => m.id === profile.id);
     const next = widgetEnabled
-      ? group?.events
-          .filter(
-            (e) =>
-              eventState(e, group.members) === "confirmed" &&
-              e.responses[profile.id] === "yes",
-          )
-          .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0]
+      ? own?.daysOff
+          ?.filter((d) => d.date >= localDate(now, d.zone))
+          .sort((a, b) => a.date.localeCompare(b.date))[0]
       : undefined;
-    void syncAgendaWidget({
-      title: next?.title || "JCuki",
-      dateText: next ? date(next.start) : "",
-      timeText: next ? time(next.start) + " – " + time(next.end) : "",
+    const slots = next && own ? playingSlots(own.slots, next) : [];
+    const payload = {
+      title: next ? t("dayOff") : "",
+      dateText: next
+        ? dayText(next.date, prefs.language, {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })
+        : "",
+      timeText: next
+        ? slots.length
+          ? time(slots[0].start) + " – " + time(slots[0].end)
+          : t("noPlayTimeYet")
+        : "",
       groupName: next ? group?.name || "" : "",
       emptyLabel: t("widgetEmpty"),
       dark,
-    }).catch(() => {});
-  }, [ready, dark, t, group, profile.id, date, time, widgetEnabled]);
+    };
+    const serialized = JSON.stringify(payload);
+    if (lastWidgetPayload.current === serialized) return;
+    lastWidgetPayload.current = serialized;
+    void syncAgendaWidget(payload).catch(() => {
+      lastWidgetPayload.current = "";
+    });
+  }, [
+    ready,
+    dark,
+    t,
+    group,
+    profile.id,
+    prefs.language,
+    time,
+    widgetEnabled,
+    now,
+  ]);
   useEffect(() => {
     if (!ready) return;
     const route = (response: Notifications.NotificationResponse) => {
@@ -96,7 +124,7 @@ function AppShell() {
         screenOptions={{
           headerShown: false,
           animation: "fade",
-          contentStyle: { backgroundColor: dark ? "#12131C" : "#F6F6FA" },
+          contentStyle: { backgroundColor: dark ? "#101A16" : "#F7F8F5" },
         }}
       >
         <Stack.Screen name="(tabs)" />

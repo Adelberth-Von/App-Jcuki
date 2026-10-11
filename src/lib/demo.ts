@@ -11,12 +11,17 @@ export function createDemoGroups(profile: Profile, now = Date.now()): Group[] {
     status: "yes" as const,
   }));
   const members: Member[] = [
-    { ...profile, slots: slots.map((slot) => ({ ...slot })) },
+    { ...profile, slots: [], daysOff: [] },
     {
       id: "demo-alex",
       nickname: "Alex",
       zone: "Europe/Berlin",
       slots: slots.map((slot) => ({ ...slot })),
+      daysOff: slots.map((s) => ({
+        date: localDate(s.start, "Europe/Berlin"),
+        zone: "Europe/Berlin",
+        confirmedAt: new Date(now).toISOString(),
+      })),
       color: "blue",
     },
     {
@@ -24,6 +29,11 @@ export function createDemoGroups(profile: Profile, now = Date.now()): Group[] {
       nickname: "Nara",
       zone: "Asia/Jayapura",
       slots: slots.map((slot) => ({ ...slot })),
+      daysOff: slots.map((s) => ({
+        date: localDate(s.start, "Asia/Jayapura"),
+        zone: "Asia/Jayapura",
+        confirmedAt: new Date(now).toISOString(),
+      })),
       color: "peach",
     },
   ];

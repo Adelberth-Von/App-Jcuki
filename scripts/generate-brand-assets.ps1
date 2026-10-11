@@ -39,11 +39,11 @@ function Write-JCukiAsset([string]$name, [int]$size, [string]$background, [strin
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
 }
 
-Write-JCukiAsset 'icon.png' 1024 '#5B51D8' '#FFFFFF' 1.0
+Write-JCukiAsset 'icon.png' 1024 '#185F50' '#FFFFFF' 1.0
 Write-JCukiAsset 'android-icon-foreground.png' 1024 '' '#FFFFFF' 0.86
 Write-JCukiAsset 'android-icon-monochrome.png' 1024 '' '#FFFFFF' 0.86
-Write-JCukiAsset 'splash-icon.png' 1024 '' '#5B51D8' 1.15
-Write-JCukiAsset 'splash-icon-dark.png' 1024 '' '#ACA6FF' 1.15
+Write-JCukiAsset 'splash-icon.png' 1024 '' '#185F50' 1.15
+Write-JCukiAsset 'splash-icon-dark.png' 1024 '' '#8FDAB5' 1.15
 Write-JCukiAsset 'notification-icon.png' 96 '' '#FFFFFF' 1.3
-Write-JCukiAsset 'favicon.png' 64 '#5B51D8' '#FFFFFF' 1.05
+Write-JCukiAsset 'favicon.png' 64 '#185F50' '#FFFFFF' 1.05
 Write-Output ('Generated original JCuki brand PNG assets in ' + $jcukiAssets)

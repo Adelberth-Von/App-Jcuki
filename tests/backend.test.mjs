@@ -12,6 +12,15 @@ function environment() {
       "utf8",
     ),
   );
+  sqlite.exec(
+    readFileSync(
+      new URL(
+        "../backend/migrations/0002_confirmed_days_off.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   const DB = {
     prepare(sql) {
       return {
@@ -80,6 +89,116 @@ async function register(env, token, index = 0) {
 }
 const future = (minutes) =>
   new Date(Date.now() + minutes * 60000).toISOString();
+
+test("explicit days off sync across members without hours or forged confirmation times", async () => {
+  const env = environment();
+  const own = await register(env, tokens[0]);
+  await register(env, tokens[1], 1);
+  await register(env, tokens[3], 3);
+  const group = (
+    await call(env, tokens[0], "/api/groups", "POST", { name: "Days off" })
+  ).data;
+  await call(env, tokens[1], "/api/join", "POST", { code: group.code });
+  const path = "/api/groups/" + group.id,
+    date = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const day = {
+    date,
+    zone: "Europe/Berlin",
+    confirmedAt: "1900-01-01T00:00:00Z",
+  };
+  const saved = await call(env, tokens[0], path + "/days-off", "PUT", {
+    daysOff: [day],
+  });
+  assert.equal(saved.status, 200);
+  assert.notEqual(saved.data.daysOff[0].confirmedAt, day.confirmedAt);
+  const read = (await call(env, tokens[1], path)).data.members.find(
+    (m) => m.id === own.id,
+  );
+  assert.deepEqual(read.slots, []);
+  assert.deepEqual(read.daysOff, saved.data.daysOff);
+  assert.equal(
+    (await call(env, tokens[3], path + "/days-off", "PUT", { daysOff: [day] }))
+      .status,
+    403,
+  );
+  const again = await call(env, tokens[0], path + "/days-off", "PUT", {
+    daysOff: [day],
+  });
+  assert.equal(
+    again.data.daysOff[0].confirmedAt,
+    saved.data.daysOff[0].confirmedAt,
+  );
+  for (const invalid of [
+    [{ date: "2027-02-30", zone: "Europe/Berlin" }],
+    [{ date, zone: "invalid/zone" }],
+    [day, day],
+    [{ date: "2000-01-01", zone: "UTC" }],
+  ]) {
+    assert.equal(
+      (
+        await call(env, tokens[0], path + "/days-off", "PUT", {
+          daysOff: invalid,
+        })
+      ).status,
+      400,
+    );
+  }
+  env.sqlite.close();
+});
+
+test("hours never confirm a day; cancelling a day and its hours is atomic", async () => {
+  const env = environment(),
+    own = await register(env, tokens[0]);
+  const group = (
+      await call(env, tokens[0], "/api/groups", "POST", { name: "Hours" })
+    ).data,
+    path = "/api/groups/" + group.id;
+  const slots = [
+    { id: "hours", start: future(120), end: future(180), status: "yes" },
+  ];
+  assert.equal(
+    (await call(env, tokens[0], path + "/availability", "PUT", { slots }))
+      .status,
+    200,
+  );
+  assert.deepEqual(
+    (await call(env, tokens[0], path)).data.members.find((m) => m.id === own.id)
+      .daysOff,
+    [],
+  );
+  const date = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+    daysOff = [{ date, zone: "Asia/Jakarta" }];
+  await call(env, tokens[0], path + "/days-off", "PUT", { daysOff });
+  assert.equal(
+    (
+      await call(env, tokens[0], path + "/days-off", "PUT", {
+        daysOff: [],
+        slots: [{ ...slots[0], end: slots[0].start }],
+      })
+    ).status,
+    400,
+  );
+  let member = (await call(env, tokens[0], path)).data.members.find(
+    (m) => m.id === own.id,
+  );
+  assert.equal(member.daysOff.length, 1);
+  assert.equal(member.slots.length, 1);
+  assert.equal(
+    (
+      await call(env, tokens[0], path + "/days-off", "PUT", {
+        daysOff: [],
+        slots: [],
+      })
+    ).status,
+    200,
+  );
+  member = (await call(env, tokens[0], path)).data.members.find(
+    (m) => m.id === own.id,
+  );
+  assert.deepEqual(member.daysOff, []);
+  assert.deepEqual(member.slots, []);
+  env.sqlite.close();
+});
 
 test("three real identities share availability and confirm; outsiders cannot read or change group", async () => {
   const env = environment(),

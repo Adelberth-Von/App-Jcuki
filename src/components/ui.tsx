@@ -123,8 +123,8 @@ export function Card({
           backgroundColor: colors.surface,
           borderColor: colors.line,
           borderWidth: 1,
-          borderRadius: 24,
-          padding: 20,
+          borderRadius: 20,
+          padding: 18,
         },
         style,
       ]}
@@ -206,12 +206,10 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   textColor?: string;
 }) {
-  const { colors, dark } = useApp();
+  const { colors } = useApp();
   const bg =
       kind === "primary"
-        ? dark
-          ? "#746BE3"
-          : colors.accent
+        ? colors.accent
         : kind === "soft"
           ? colors.accentSoft
           : kind === "danger"
@@ -222,7 +220,7 @@ export function Button({
     color =
       textColor ||
       (kind === "primary"
-        ? "#FFFFFF"
+        ? colors.onAccent
         : kind === "danger"
           ? colors.danger
           : kind === "secondary"
@@ -359,13 +357,13 @@ export function Brand() {
         style={{
           width: 33,
           height: 33,
-          backgroundColor: "#5B51D8",
+          backgroundColor: colors.accent,
           borderRadius: 11,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Icon name="link" color="#FFFFFF" size={23} />
+        <Icon name="link" color={colors.onAccent} size={23} />
       </View>
       <Txt size={23} weight="bold" style={{ letterSpacing: -1 }}>
         JCuki
@@ -515,6 +513,7 @@ export function Screen({
         <Header back={back} />
         {scroll ? (
           <ScrollView
+            showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             refreshControl={
               <RefreshControl
@@ -568,7 +567,7 @@ export function Screen({
               title={action.title}
               onPress={action.onPress}
               icon={action.icon || "add"}
-              style={{ boxShadow: "0 6px 18px rgba(70,60,170,0.12)" }}
+              style={{ boxShadow: "0 4px 12px rgba(20,60,40,0.10)" }}
             />
           </View>
         )}
@@ -685,7 +684,7 @@ export function ToggleRow({
           <Switch
             value={value}
             accessible={false}
-            trackColor={{ false: colors.line, true: "#5B51D8" }}
+            trackColor={{ false: colors.line, true: colors.accent }}
             thumbColor="#FFFFFF"
             ios_backgroundColor={colors.line}
           />

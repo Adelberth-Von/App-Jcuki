@@ -1,4 +1,11 @@
-import type { Availability, Event, Language, Match, Member } from "./types";
+import type {
+  Availability,
+  DayOff,
+  Event,
+  Language,
+  Match,
+  Member,
+} from "./types";
 
 export const ZONES: [string, string][] = [
   ["Asia/Jakarta", "Jakarta · WIB"],
@@ -72,6 +79,36 @@ export function addDays(day: string, count: number): string {
 }
 export function weekStart(day: string): string {
   return addDays(day, -((validDay(day).getUTCDay() + 6) % 7));
+}
+export function confirmLocalDay(
+  date: string,
+  zone: string,
+  now = Date.now(),
+): DayOff {
+  validDay(date);
+  if (!validZone(zone)) throw new Error("INVALID_TIME");
+  if (date < localDate(now, zone)) throw new Error("pastTime");
+  return { date, zone, confirmedAt: new Date(now).toISOString() };
+}
+export function playingSlots(
+  slots: Availability[],
+  day: DayOff,
+): Availability[] {
+  return slots
+    .filter(
+      (s) => s.status === "yes" && localDate(s.start, day.zone) === day.date,
+    )
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+}
+export function removeConfirmedDay(member: Member, date: string): Member {
+  const day = member.daysOff?.find((d) => d.date === date);
+  return {
+    ...member,
+    daysOff: (member.daysOff || []).filter((d) => d.date !== date),
+    slots: day
+      ? member.slots.filter((s) => localDate(s.start, day.zone) !== date)
+      : member.slots,
+  };
 }
 // IANA zones automatically account for seasonal clock changes. Explicitly reject skipped/repeated local hours.
 export function wallToUTC(day: string, time: string, zone: string): string {

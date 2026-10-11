@@ -1,4 +1,4 @@
 <resources>
-    <string name="jcuki_widget_empty">Your next plan starts here</string>
-    <string name="jcuki_widget_description">Your next shared plan in your local time.</string>
+    <string name="jcuki_widget_empty">No confirmed days off yet</string>
+    <string name="jcuki_widget_description">Your next confirmed day off and playing hours.</string>
 </resources>

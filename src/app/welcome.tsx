@@ -54,12 +54,12 @@ function TogetherIllustration() {
         style={{
           width: 91,
           height: 91,
-          backgroundColor: "#5B51D8",
+          backgroundColor: "#185F50",
           borderRadius: 30,
           justifyContent: "center",
           alignItems: "center",
           transform: [{ rotate: "-9deg" }],
-          boxShadow: "0 12px 36px rgba(80,70,180,0.18)",
+          boxShadow: "0 12px 36px rgba(20,60,40,0.14)",
         }}
       >
         <Icon name="link" color="#FFFFFF" size={57} />

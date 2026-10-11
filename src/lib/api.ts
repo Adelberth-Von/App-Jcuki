@@ -1,6 +1,7 @@
 import type {
   Availability,
   AvailabilityStatus,
+  DayOff,
   Event,
   EventInput,
   EventPageOptions,
@@ -30,6 +31,11 @@ export interface APIClient {
   joinGroup(code: string): Promise<GroupSummary>;
   getGroup(groupId: string): Promise<Group>;
   updateAvailability(groupId: string, slots: Availability[]): Promise<void>;
+  updateDaysOff(
+    groupId: string,
+    daysOff: DayOff[],
+    slots?: Availability[],
+  ): Promise<DayOff[]>;
   listEvents(groupId: string, options?: EventPageOptions): Promise<Page<Event>>;
   createEvent(groupId: string, input: EventInput): Promise<Event>;
   respondToEvent(
@@ -129,6 +135,14 @@ export function createApiClient({
     getGroup: (groupId) => request(groupPath(groupId)),
     updateAvailability: async (groupId, slots) => {
       await request(groupPath(groupId) + "/availability", "PUT", { slots });
+    },
+    updateDaysOff: async (groupId, daysOff, slots) => {
+      const result = await request<{ daysOff: DayOff[] }>(
+        groupPath(groupId) + "/days-off",
+        "PUT",
+        { daysOff, ...(slots ? { slots } : {}) },
+      );
+      return result.daysOff;
     },
     listEvents: (groupId, options) =>
       request(groupPath(groupId) + "/events" + query(options)),

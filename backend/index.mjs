@@ -20,6 +20,32 @@ function interval(start, end) {
   if (length <= 0 || length > 86400000) fail('INVALID_RANGE');
   return { start: a, end: b };
 }
+function validateSlots(input) {
+  if (!Array.isArray(input) || input.length > 150) fail('INVALID_AVAILABILITY');
+  const ids = new Set();
+  return input.map(slot => {
+    if (!slot || !text(slot.id, 1, 64) || ids.has(slot.id) || !STATUSES.includes(slot.status)) fail('INVALID_AVAILABILITY');
+    ids.add(slot.id);
+    return { id: slot.id, ...interval(slot.start, slot.end), status: slot.status };
+  });
+}
+function localDay(now, zone) {
+  const values = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(now)).map(p => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+function validateDaysOff(input, previous) {
+  if (!Array.isArray(input) || input.length > 150) fail('INVALID_DAY_OFF');
+  const dates = new Set(), now = nowISO();
+  return input.map(day => {
+    if (!day || typeof day.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day.date) || !validZone(day.zone)) fail('INVALID_DAY_OFF');
+    const stamp = new Date(day.date + 'T12:00:00Z');
+    if (!Number.isFinite(stamp.getTime()) || stamp.toISOString().slice(0,10) !== day.date || dates.has(day.date)) fail('INVALID_DAY_OFF');
+    dates.add(day.date);
+    const old = previous.find(d => d.date === day.date && d.zone === day.zone);
+    if (!old && day.date < localDay(now, day.zone)) fail('INVALID_DAY_OFF');
+    return { date: day.date, zone: day.zone, confirmedAt: old?.confirmedAt || now };
+  });
+}
 function inviteCode() { const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; return Array.from(crypto.getRandomValues(new Uint8Array(12)), byte => alphabet[byte % alphabet.length]).join(''); }
 const one = (db, sql, ...values) => db.prepare(sql).bind(...values).first();
 const rows = async (db, sql, ...values) => (await db.prepare(sql).bind(...values).all()).results;
@@ -156,17 +182,19 @@ export async function handleAPI(request, env) {
     if (path[1] !== 'groups' || !UUID.test(path[2] || '')) fail('NOT_FOUND', 404);
     const groupId = path[2], member = await one(db, 'SELECT * FROM members WHERE group_id=? AND user_id=?', groupId, uid); if (!member) fail('NO_PERMISSION', 403);
     if (path.length === 3 && method === 'GET') {
-      const members = await rows(db, 'SELECT p.id,p.nickname,p.zone,p.avatar_mime,p.updated_at,m.slots,m.joined_at FROM members m JOIN profiles p ON p.id=m.user_id WHERE m.group_id=? ORDER BY m.joined_at,p.id', groupId);
+      const members = await rows(db, 'SELECT p.id,p.nickname,p.zone,p.avatar_mime,p.updated_at,m.slots,m.days_off,m.joined_at FROM members m JOIN profiles p ON p.id=m.user_id WHERE m.group_id=? ORDER BY m.joined_at,p.id', groupId);
       const page = await eventPage(db, groupId, new URL(url.origin + '/?limit=20&view=upcoming'));
-      return json({ ...groupShape(await groupRow(db, groupId)), members: members.map(row => ({ ...profileShape(row, url.origin), slots: JSON.parse(row.slots), joinedAt: row.joined_at })), events: page.items, eventsNextCursor: page.nextCursor }, 200, cors);
+      return json({ ...groupShape(await groupRow(db, groupId)), members: members.map(row => ({ ...profileShape(row, url.origin), slots: JSON.parse(row.slots), daysOff: JSON.parse(row.days_off), joinedAt: row.joined_at })), events: page.items, eventsNextCursor: page.nextCursor }, 200, cors);
     }
     if (path.length === 4 && path[3] === 'availability' && method === 'PUT') {
-      if (!Array.isArray(body.slots) || body.slots.length > 150) fail('INVALID_AVAILABILITY');
-      const ids = new Set(); const slots = body.slots.map(slot => {
-        if (!slot || !text(slot.id, 1, 64) || ids.has(slot.id) || !STATUSES.includes(slot.status)) fail('INVALID_AVAILABILITY'); ids.add(slot.id);
-        return { id: slot.id, ...interval(slot.start, slot.end), status: slot.status };
-      });
+      const slots = validateSlots(body.slots);
       await run(db, 'UPDATE members SET slots=? WHERE group_id=? AND user_id=?', JSON.stringify(slots), groupId, uid); return json({ ok: true }, 200, cors);
+    }
+    if (path.length === 4 && path[3] === 'days-off' && method === 'PUT') {
+      const daysOff = validateDaysOff(body.daysOff, JSON.parse(member.days_off));
+      const slots = body.slots === undefined ? JSON.parse(member.slots) : validateSlots(body.slots);
+      await run(db, 'UPDATE members SET days_off=?,slots=? WHERE group_id=? AND user_id=?', JSON.stringify(daysOff), JSON.stringify(slots), groupId, uid);
+      return json({ daysOff }, 200, cors);
     }
     if (path.length === 4 && path[3] === 'events' && method === 'GET') return json(await eventPage(db, groupId, url), 200, cors);
     if (path.length === 4 && path[3] === 'events' && method === 'POST') {

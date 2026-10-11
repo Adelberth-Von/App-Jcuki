@@ -11,7 +11,14 @@ import { AppState, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createApiClient, type APIClient, APIError } from "./lib/api";
 import { createDemoGroups } from "./lib/demo";
-import { eventState, formatDate, formatTime } from "./lib/domain";
+import {
+  confirmLocalDay,
+  eventState,
+  formatDate,
+  formatTime,
+  localDate,
+  removeConfirmedDay,
+} from "./lib/domain";
 import {
   createOperationGate,
   reconcileOwnProfile,
@@ -50,6 +57,7 @@ import { lightColors, darkColors, type Colors } from "./theme";
 import { translate } from "./i18n";
 export type Overlay =
   | { kind: "slot"; slot?: Availability; day?: string }
+  | { kind: "dayOff"; day: string }
   | { kind: "event"; start?: string; duration?: number }
   | { kind: "details"; id: string }
   | { kind: "createGroup" }
@@ -104,6 +112,8 @@ interface AppContextValue {
   joinGroup: (code: string) => Promise<void>;
   saveAvailability: (slot: Availability, replaceId?: string) => Promise<void>;
   deleteAvailability: (id: string) => Promise<void>;
+  confirmDayOff: (day: string) => Promise<void>;
+  removeDayOff: (day: string) => Promise<void>;
   createEvent: (input: EventInput) => Promise<void>;
   respond: (id: string, status: AvailabilityStatus) => Promise<void>;
   cancelEvent: (id: string) => Promise<void>;
@@ -142,6 +152,8 @@ const errors: Record<string, string> = {
   INVALID_RANGE: "invalidRange",
   EVENT_IN_PAST: "pastTime",
   INVALID_AVAILABILITY: "invalidInput",
+  INVALID_DAY_OFF: "invalidInput",
+  DAY_OFF_REQUIRED: "dayOffRequired",
   INVALID_GROUP_NAME: "invalidInput",
   INVALID_EVENT_TITLE: "invalidInput",
   INVALID_MINIMUM: "invalidInput",
@@ -709,12 +721,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       notify("groupJoined");
     });
   }
+  async function confirmDayOff(day: string) {
+    if (!group) {
+      notify("joinFirst");
+      return;
+    }
+    await run(async () => {
+      const own = group.members.find((m) => m.id === profile.id);
+      const old = own?.daysOff || [];
+      let daysOff = old.some((d) => d.date === day)
+        ? old
+        : [...old, confirmLocalDay(day, zone)];
+      if (!demoMode)
+        daysOff = await requireApi().updateDaysOff(group.id, daysOff);
+      replaceGroup({
+        ...group,
+        members: group.members.map((m) =>
+          m.id === profile.id ? { ...m, daysOff } : m,
+        ),
+      });
+      setOverlay(null);
+      notify("dayOffSaved");
+    });
+  }
+  async function removeDayOff(day: string) {
+    if (!group) return;
+    await run(async () => {
+      const own = group.members.find((m) => m.id === profile.id);
+      if (!own) return;
+      const next = removeConfirmedDay(own, day);
+      if (!demoMode)
+        next.daysOff = await requireApi().updateDaysOff(
+          group.id,
+          next.daysOff || [],
+          next.slots,
+        );
+      replaceGroup({
+        ...group,
+        members: group.members.map((m) => (m.id === profile.id ? next : m)),
+      });
+      setOverlay(null);
+      notify("dayOffRemoved");
+    });
+  }
   async function saveAvailability(slot: Availability, replaceId?: string) {
     if (!group) {
       notify("joinFirst");
       return;
     }
     await run(async () => {
+      const own = group.members.find((member) => member.id === profile.id);
+      if (
+        !own?.daysOff?.some(
+          (day) => localDate(slot.start, day.zone) === day.date,
+        )
+      )
+        throw new Error("DAY_OFF_REQUIRED");
       const old =
         group.members.find((member) => member.id === profile.id)?.slots || [];
       if (
@@ -938,6 +1000,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         joinGroup,
         saveAvailability,
         deleteAvailability,
+        confirmDayOff,
+        removeDayOff,
         createEvent,
         respond,
         cancelEvent,

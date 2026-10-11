@@ -64,12 +64,15 @@ All paths below are prefixed with `/api`. GET `/health` is public.
 | POST | `/join` | `{code}` → GroupSummary |
 | GET | `/groups/:id` | Group with members and first 20 upcoming events |
 | PUT | `/groups/:id/availability` | `{slots:[{id,start,end,status}]}` |
+| PUT | `/groups/:id/days-off` | `{daysOff:[{date,zone}],slots?:[]}` → `{daysOff}` with server-issued confirmation timestamps |
 | GET | `/groups/:id/events?view=upcoming&limit=20&cursor=…` | `{items:Event[],nextCursor}`; `view` can be `upcoming`, `history`, `all` |
 | POST | `/groups/:id/events` | `{title,start,end,minimum}` → Event |
 | PUT | `/groups/:id/events/:eventId/response` | `{value:'yes'|'maybe'|'no'}` |
 | DELETE | `/groups/:id/events/:eventId` | Cancels event |
 
 Use UTC ISO timestamps, e.g. `2026-10-12T13:00:00.000Z`. The app converts local wall time using IANA zones such as `Europe/Berlin` or `Asia/Jakarta`. This accounts for CET/CEST transitions. Skipped and ambiguous DST times require the user to select a different local hour; the app does not silently shift the intended time.
+
+Apply **both migrations**, including `0002_confirmed_days_off.sql`, before deploying this version. An explicit day off uses `YYYY-MM-DD` and its original IANA zone, so a 25-hour daylight-saving day remains valid without a mandatory time interval. Availability updates never confirm a day implicitly. Only the authenticated member can update their own days. New past dates, invalid dates/zones, and duplicate dates are rejected. Confirmation timestamps are issued by the server; unchanged confirmations retain theirs. Optional hours can be updated atomically with cancellation.
 
 Pagination is keyset based in SQL, scoped to the authenticated member/group/view, with a limit between 1 and 50. `getGroup()` returns `eventsNextCursor`; use `listEvents()` to continue the upcoming event collection. Event history needs its separate `view:'history'` request. Do not concatenate pages from different views.
 

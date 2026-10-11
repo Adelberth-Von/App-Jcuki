@@ -280,23 +280,6 @@ export default function Settings() {
           }}
         />
         <Divider />
-        <SelectRow
-          label={t("eventReminder")}
-          value={prefs.eventReminderMinutes + " " + t("minute")}
-          onPress={() =>
-            setOverlay({
-              kind: "choice",
-              title: t("eventReminder"),
-              choices: [5, 15, 30, 60].map((v) => ({
-                value: String(v),
-                label: v + " " + t("minute"),
-              })),
-              value: String(prefs.eventReminderMinutes),
-              onSelect: (v) => change({ eventReminderMinutes: Number(v) }),
-            })
-          }
-        />
-        <Divider />
         <ToggleRow
           label={t("notificationSound")}
           description={t("soundDescription")}

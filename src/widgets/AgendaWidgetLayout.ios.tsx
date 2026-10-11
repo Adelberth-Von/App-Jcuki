@@ -17,9 +17,9 @@ const AgendaLayout = (
 ) => {
   "widget";
   const dark = environment.colorScheme === "dark";
-  const foreground = dark ? "#F3F3FA" : "#222334";
-  const muted = dark ? "#B1B4C7" : "#696B7F";
-  const accent = dark ? "#ACA6FF" : "#5B51D8";
+  const foreground = dark ? "#F1F6F0" : "#182C25";
+  const muted = dark ? "#ADBCB2" : "#617068";
+  const accent = dark ? "#8FDAB5" : "#185F50";
   const hasPlan = Boolean(props.title);
   return (
     <VStack
@@ -31,9 +31,9 @@ const AgendaLayout = (
           maxHeight: Infinity,
           alignment: "leading",
         }),
-        containerBackground(dark ? "#1C1E2A" : "#FFFFFF", "widget"),
+        containerBackground(dark ? "#192720" : "#FFFFFF", "widget"),
         accessibilityElement("combine"),
-        widgetURL("jcuki://dashboard"),
+        widgetURL("jcuki://calendar"),
       ]}
     >
       <Text
@@ -56,7 +56,7 @@ const AgendaLayout = (
       >
         {hasPlan
           ? props.title
-          : props.emptyLabel || "Your next plan starts here"}
+          : props.emptyLabel || "No confirmed days off yet"}
       </Text>
       {hasPlan ? (
         <VStack alignment="leading" spacing={3}>

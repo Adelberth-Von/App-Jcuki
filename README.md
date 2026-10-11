@@ -7,8 +7,13 @@ A native React Native / Expo app for friends with unpredictable shifts and diffe
 ## Screen preview
 
 <p>
-  <img src="docs/preview/dashboard-light.jpg" alt="JCuki dashboard in light mode" width="196" />
-  <img src="docs/preview/dashboard-dark.jpg" alt="JCuki dashboard in dark mode" width="196" />
+  <img src="docs/preview/dashboard-light.png" alt="JCuki dashboard in light mode" width="196" />
+  <img src="docs/preview/dashboard-dark.png" alt="JCuki dashboard in dark mode" width="196" />
+</p>
+<p>
+  <img src="docs/preview/calendar.png" alt="Monthly confirmed days off" width="196" />
+  <img src="docs/preview/confirm-day.png" alt="Explicit day-off confirmation" width="196" />
+  <img src="docs/preview/playing-hours.png" alt="Optional playing hours" width="196" />
 </p>
 
 These images show the React Native screens rendered in a browser for layout review. Install the APK to try the native Android experience.
@@ -16,12 +21,12 @@ These images show the React Native screens rendered in a browser for layout revi
 ## Included
 
 - Welcome/profile editor with nickname and system-gallery photo selection.
-- Dashboard, weekly availability, overlapping free-time suggestions, group invitations, RSVP and confirmed plans.
+- A focused dashboard and monthly calendar: tap a date, explicitly confirm your day off, then optionally add start/end playing hours. Merely selecting a date never confirms it. No automatic shared-time suggestions.
 - Indonesian/English, light/dark/system appearance, automatic or chosen IANA time zone, 24-hour/AM/PM. Berlin daylight-saving transitions are handled explicitly.
 - Pagination: four cards per page in the UI; cursor pagination in the shared API, including previous plans.
 - Weekly local reminders and accepted-plan reminders with the original **JCuki Chime**. Permission is requested after a user action. Android channels and bundled iOS sound are configured.
-- Android home-screen widget and iOS WidgetKit extension, gallery image cropping/compression, calendar .ics export, and an uninstall entry leading to the operating system's removal flow.
-- Minimum 48×48 touch targets, 20px page padding, bottom primary actions, instant press feedback, accessible labels, text scaling, reduced-motion loading skeletons and solid indigo accent.
+- Android home-screen widget and iOS WidgetKit extension showing the next confirmed day off, gallery image cropping/compression, and an uninstall entry leading to the operating system's removal flow.
+- Minimum 48×48 touch targets, 20px page padding, bottom primary actions, instant press feedback, accessible labels, text scaling, reduced-motion loading skeletons and a solid forest-green accent.
 - Cloudflare Worker + D1 shared backend in `backend/`, including real membership checks, private photos, rate limiting and server pagination.
 
 ## Run
@@ -45,6 +50,8 @@ Push to `main` starts GitHub Actions and builds a standalone Android preview APK
 The optional manual workflow can compile an unsigned iOS Simulator app. A physical iPhone build needs an Apple Developer account, device provisioning and EAS/Xcode signing; Android APKs cannot be installed on iPhone. `eas.json` includes preview, simulator and production profiles.
 
 ## Shared schedules
+
+Days off are explicit local calendar dates stored with the IANA zone used when confirmed. Playing hours are optional UTC intervals. Removing hours leaves the day confirmed; cancelling the day removes its associated hours. Existing availability is never automatically converted into a confirmed day off. If updating an existing backend, apply migration `0002_confirmed_days_off.sql` before deploying the worker.
 
 Without a configured server, **Explore a demo** uses clearly labelled sample members on this device. It does not connect real friends. Deploy `backend/` following [backend instructions](backend/README.md), then set `EXPO_PUBLIC_API_URL` (or the GitHub repository variable of the same name) before building. The preview also accepts the HTTPS address in Settings → Group connection.
 

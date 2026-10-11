@@ -162,10 +162,10 @@ export function setWeeklyReminder(
     const id = preferences.language === "id";
     const notification = content(
       preferences,
-      id ? "Waktunya menyusun minggu ini" : "Make room for your people",
+      id ? "Waktunya menyusun minggu ini" : "Confirm this week’s days off",
       id
-        ? "Isi waktu luangmu di JCuki agar temanmu bisa menemukan waktu bersama."
-        : "Add your free time in JCuki so your friends can find a moment together.",
+        ? "Konfirmasi tanggal liburmu di kalender JCuki. Tambahkan jam bermain jika sudah tahu."
+        : "Confirm your days off in the JCuki calendar. Add playing hours when you know.",
       { screen: "/(tabs)/calendar", kind: "weekly" },
     );
     const zone = getEffectiveTimeZone(preferences);

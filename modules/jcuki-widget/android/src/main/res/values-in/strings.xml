@@ -1,4 +1,4 @@
 <resources>
-    <string name="jcuki_widget_empty">Rencana berikutnya dimulai di sini</string>
-    <string name="jcuki_widget_description">Agenda bersama berikutnya dalam waktu lokalmu.</string>
+    <string name="jcuki_widget_empty">Belum ada libur yang dikonfirmasi</string>
+    <string name="jcuki_widget_description">Hari libur berikutnya dan jam bermainmu.</string>
 </resources>

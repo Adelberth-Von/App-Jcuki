@@ -36,10 +36,11 @@ import {
   Press,
   Row,
   Toast,
+  ToggleRow,
   Txt,
 } from "./ui";
 import { DateControl } from "./DateControl";
-import { StatusPill } from "./schedule";
+import { dayText, StatusPill } from "./schedule";
 
 function clock(instant: string, zone: string) {
   const p = parts(instant, zone);
@@ -77,6 +78,7 @@ function errorText(e: unknown, t: (key: string) => string) {
     API_BASE_URL_INVALID: "apiInvalid",
     API_HTTPS_REQUIRED: "apiInvalid",
     BUSY: "syncing",
+    DAY_OFF_REQUIRED: "dayOffRequired",
   };
   return t(
     map[code] ||
@@ -133,6 +135,65 @@ function StatusChoices({
     </Row>
   );
 }
+function DayOffConfirmation({ day }: { day: string }) {
+  const { t, prefs, zone, colors, busy, confirmDayOff, setOverlay } = useApp();
+  const [error, setError] = useState("");
+  return (
+    <>
+      <View
+        style={{
+          backgroundColor: colors.accentSoft,
+          borderRadius: 20,
+          padding: 24,
+          gap: 5,
+          alignItems: "center",
+        }}
+      >
+        <Icon name="calendar-outline" color={colors.accent} size={30} />
+        <Txt size={34} weight="bold">
+          {Number(day.slice(-2))}
+        </Txt>
+        <Txt size={16} weight="semibold">
+          {dayText(day, prefs.language, {
+            weekday: undefined,
+            month: "long",
+            year: "numeric",
+            day: undefined,
+          })}
+        </Txt>
+        <Txt size={14} muted>
+          {dayText(day, prefs.language, {
+            weekday: "long",
+            day: undefined,
+            month: undefined,
+          })}
+        </Txt>
+        <Txt muted size={12}>
+          {zone} · {zoneAbbreviation(zone, day + "T12:00:00Z")}
+        </Txt>
+      </View>
+      <Txt size={14} muted>
+        {t("confirmDayDescription")}
+      </Txt>
+      <FormError error={error} />
+      <Button
+        title={busy ? t("syncing") : t("confirmDayOff")}
+        icon="checkmark"
+        disabled={busy}
+        onPress={() => {
+          setError("");
+          void confirmDayOff(day).catch((e) => setError(errorText(e, t)));
+        }}
+      />
+      <Button
+        title={t("cancel")}
+        kind="secondary"
+        disabled={busy}
+        onPress={() => setOverlay(null)}
+      />
+    </>
+  );
+}
 function SlotForm({
   overlay,
 }: {
@@ -141,73 +202,97 @@ function SlotForm({
   const {
     t,
     zone,
+    prefs,
+    group,
+    profile,
     busy,
     saveAvailability,
     deleteAvailability,
     setOverlay,
-    colors,
   } = useApp();
-  const slot = overlay.slot;
-  const [startDay, setStartDay] = useState(() =>
-      slot
-        ? localDate(slot.start, zone)
-        : overlay.day || addDays(localDate(Date.now(), zone), 1),
+  const slot = overlay.slot,
+    own = group?.members.find((m) => m.id === profile.id);
+  const day = own?.daysOff?.find(
+    (d) =>
+      d.date === overlay.day ||
+      (!overlay.day && slot && localDate(slot.start, d.zone) === d.date),
+  );
+  const [fallbackDay] = useState(() => localDate(Date.now(), zone));
+  const savedZone = day?.zone || zone,
+    selected = day?.date || overlay.day || fallbackDay;
+  const [start, setStart] = useState(
+      slot ? clock(slot.start, savedZone) : "20:00",
     ),
-    [endDay, setEndDay] = useState(() =>
-      slot
-        ? localDate(slot.end, zone)
-        : overlay.day || addDays(localDate(Date.now(), zone), 1),
+    [end, setEnd] = useState(slot ? clock(slot.end, savedZone) : "23:00");
+  const [overnight, setOvernight] = useState(
+      !!slot && localDate(slot.end, savedZone) !== selected,
     ),
-    [start, setStart] = useState(slot ? clock(slot.start, zone) : "20:00"),
-    [end, setEnd] = useState(slot ? clock(slot.end, zone) : "23:00"),
-    [status, setStatus] = useState<AvailabilityStatus>(slot?.status || "yes"),
     [error, setError] = useState("");
   async function save() {
     setError("");
     try {
-      const a = wallToUTC(startDay, start, zone),
-        b = wallToUTC(endDay, end, zone);
-      if (Date.parse(b) <= Date.parse(a)) throw new Error("invalidRange");
-      if (Date.parse(a) < Date.now() && !slot) throw new Error("pastTime");
-      if (Date.parse(b) - Date.parse(a) > 86400000)
+      if (!day) throw new Error("DAY_OFF_REQUIRED");
+      const a = wallToUTC(selected, start, savedZone),
+        b = wallToUTC(
+          overnight ? addDays(selected, 1) : selected,
+          end,
+          savedZone,
+        );
+      if (
+        Date.parse(b) <= Date.parse(a) ||
+        Date.parse(b) - Date.parse(a) > 86400000
+      )
         throw new Error("invalidRange");
+      if (!slot && Date.parse(a) < Date.now()) throw new Error("pastTime");
       await saveAvailability(
-        { id: slot?.id || Crypto.randomUUID(), start: a, end: b, status },
+        {
+          id: slot?.id || Crypto.randomUUID(),
+          start: a,
+          end: b,
+          status: "yes",
+        },
         slot?.id,
       );
     } catch (e) {
       setError(errorText(e, t));
     }
   }
+  if (!day)
+    return (
+      <>
+        <Txt muted>{t("dayOffRequired")}</Txt>
+        <Button
+          title={t("confirmDayOff")}
+          onPress={() => setOverlay({ kind: "dayOff", day: selected })}
+        />
+      </>
+    );
   return (
     <>
-      <Txt size={12} muted>
-        {t("slotDescription")}
+      <Row between>
+        <View style={{ flex: 1 }}>
+          <Txt size={20} weight="bold">
+            {dayText(selected, prefs.language, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </Txt>
+          <Txt size={12} muted>
+            {savedZone} · {zoneAbbreviation(savedZone, selected + "T12:00:00Z")}
+          </Txt>
+        </View>
+        <Icon name="checkmark-circle" size={24} />
+      </Row>
+      <Txt muted size={14}>
+        {t("playTimeDescription")}
       </Txt>
-      <Pill label={zone + " · " + zoneAbbreviation(zone)} dot={false} />
-      <Card style={{ paddingHorizontal: 15, paddingVertical: 3 }}>
-        <DateControl
-          label={t("date")}
-          mode="date"
-          value={startDay}
-          onChange={(v) => {
-            setStartDay(v);
-            if (endDay === startDay) setEndDay(v);
-          }}
-        />
-        <Divider />
+      <Card style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
         <DateControl
           label={t("startTime")}
           mode="time"
           value={start}
           onChange={setStart}
-        />
-        <Divider />
-        <DateControl
-          label={t("endDate")}
-          mode="date"
-          value={endDay}
-          onChange={setEndDay}
         />
         <Divider />
         <DateControl
@@ -217,28 +302,29 @@ function SlotForm({
           onChange={setEnd}
         />
       </Card>
-      <Txt size={12} weight="semibold">
-        {t("status")}
-      </Txt>
-      <StatusChoices value={status} onChange={setStatus} />
+      <ToggleRow
+        label={t("crossMidnight")}
+        value={overnight}
+        onChange={setOvernight}
+      />
       <FormError error={error} />
       <Button
-        title={busy ? t("syncing") : t("save")}
+        title={busy ? t("syncing") : t("savePlayTime")}
         icon="checkmark"
         onPress={() => void save()}
         disabled={busy}
       />
       {slot && (
         <Button
-          title={t("remove")}
+          title={t("removePlayTime")}
           kind="danger"
           icon="trash-outline"
           disabled={busy}
           onPress={() =>
             setOverlay({
               kind: "confirm",
-              title: t("removeSlot"),
-              description: t("removeSlotDescription"),
+              title: t("removePlayTime"),
+              description: t("removePlayTimeDescription"),
               onConfirm: () => deleteAvailability(slot.id),
             })
           }
@@ -745,7 +831,9 @@ export function OverlayHost() {
   const [confirming, setConfirming] = useState(false);
   if (!overlay) return null;
   const titles: Record<Overlay["kind"], string> = {
-    slot: overlay.kind === "slot" && overlay.slot ? "edit" : "addAvailability",
+    slot:
+      overlay.kind === "slot" && overlay.slot ? "editPlayTime" : "addPlayTime",
+    dayOff: "confirmDayOff",
     event: "makePlan",
     details: "planDetails",
     createGroup: "createGroup",
@@ -823,11 +911,18 @@ export function OverlayHost() {
             />
           </Row>
           <ScrollView
+            showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ padding: 20, paddingTop: 10, gap: 17 }}
           >
+            {overlay.kind === "dayOff" && (
+              <DayOffConfirmation key={overlay.day} day={overlay.day} />
+            )}
             {overlay.kind === "slot" && (
-              <SlotForm key={overlay.slot?.id || "new"} overlay={overlay} />
+              <SlotForm
+                key={overlay.slot?.id || overlay.day || "new"}
+                overlay={overlay}
+              />
             )}{" "}
             {overlay.kind === "event" && <EventForm overlay={overlay} />}{" "}
             {overlay.kind === "createGroup" && <GroupForm join={false} />}{" "}
@@ -875,7 +970,7 @@ export function OverlayHost() {
                   {overlay.description}
                 </Txt>
                 <Button
-                  title={t("done")}
+                  title={overlay.title}
                   kind="danger"
                   disabled={busy || confirming}
                   onPress={() => {

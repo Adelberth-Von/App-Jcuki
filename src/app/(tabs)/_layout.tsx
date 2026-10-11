@@ -1,4 +1,5 @@
 import React from "react";
+import { View } from "react-native";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../../store";
@@ -29,7 +30,7 @@ export default function TabLayout() {
         tabBarItemStyle: { minHeight: 48 },
         tabBarLabelStyle: {
           fontFamily: font.medium,
-          fontSize: 10,
+          fontSize: 12,
           marginTop: 2,
         },
         sceneStyle: { backgroundColor: colors.bg },
@@ -42,8 +43,19 @@ export default function TabLayout() {
           options={{
             title: t(key),
             tabBarAccessibilityLabel: t(key),
-            tabBarIcon: ({ color }) => (
-              <Icon name={icon} color={color} size={22} />
+            tabBarIcon: ({ color, focused }) => (
+              <View
+                style={{
+                  width: 48,
+                  height: 30,
+                  borderRadius: 15,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: focused ? colors.accentSoft : "transparent",
+                }}
+              >
+                <Icon name={icon} color={color} size={22} />
+              </View>
             ),
           }}
         />

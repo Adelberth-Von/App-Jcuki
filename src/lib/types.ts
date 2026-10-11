@@ -13,8 +13,14 @@ export interface Profile {
   avatarUri?: string;
   updatedAt?: string;
 }
+export interface DayOff {
+  date: string;
+  zone: string;
+  confirmedAt: string;
+}
 export interface Member extends Profile {
   slots: Availability[];
+  daysOff?: DayOff[];
   joinedAt?: string;
   color?: string;
 }

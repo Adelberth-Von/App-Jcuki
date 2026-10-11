@@ -1,158 +1,160 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { useApp } from "../../store";
+import { localDate, playingSlots, zoneAbbreviation } from "../../lib/domain";
+import { useMinuteClock } from "../../hooks/useMinuteClock";
 import {
-  addDays,
-  availabilityForDay,
-  localDate,
-  weekStart,
-} from "../../lib/domain";
-import {
-  Avatar,
+  Button,
   Card,
-  Divider,
-  Empty,
   Icon,
+  Pill,
   Press,
   Row,
   Screen,
-  SectionTitle,
   Txt,
-  Pill,
 } from "../../components/ui";
-import { dayText, WeekStrip } from "../../components/schedule";
+import { dayText } from "../../components/schedule";
+import { CalendarMonth, FriendsSchedule } from "../../components/daysOff";
 export default function Calendar() {
-  const { t, prefs, zone, group, profile, setOverlay, time, colors } = useApp();
-  const [selected, setSelected] = useState(() => localDate(Date.now(), zone));
+  const {
+    t,
+    prefs,
+    zone,
+    group,
+    profile,
+    setOverlay,
+    time,
+    colors,
+    removeDayOff,
+  } = useApp();
+  const [selected, setSelected] = useState(() => localDate(Date.now(), zone)),
+    now = useMinuteClock();
   const mine = group?.members.find((m) => m.id === profile.id),
-    slots = availabilityForDay(mine?.slots || [], selected, zone);
+    day = mine?.daysOff?.find((d) => d.date === selected),
+    slots = day ? playingSlots(mine?.slots || [], day) : [];
+  function open(date = selected) {
+    if (!group) {
+      setOverlay({ kind: "joinGroup" });
+      return;
+    }
+    const confirmed = mine?.daysOff?.find((d) => d.date === date);
+    setOverlay(
+      confirmed
+        ? {
+            kind: "slot",
+            day: date,
+            slot: playingSlots(mine?.slots || [], confirmed)[0],
+          }
+        : { kind: "dayOff", day: date },
+    );
+  }
   return (
     <Screen
       title={t("calendar")}
-      description={t("slotDescription")}
-      action={{
-        title: t("addAvailability"),
-        onPress: () => setOverlay({ kind: "slot", day: selected }),
-      }}
+      description={t("calendarHint")}
+      action={
+        selected < localDate(now, day?.zone || zone) && !day
+          ? undefined
+          : {
+              title: t(day ? "addPlayTime" : "confirmDayOff"),
+              icon: day ? "time-outline" : "checkmark",
+              onPress: () => open(),
+            }
+      }
     >
-      <WeekStrip
-        start={weekStart(selected)}
+      <Pill
+        label={zone.split("/").at(-1) + " · " + zoneAbbreviation(zone, now)}
+        tone="muted"
+        dot={false}
+      />
+      <CalendarMonth
         selected={selected}
-        onSelect={setSelected}
-        onWeek={(n) => setSelected(addDays(selected, n * 7))}
+        onSelect={(date) => {
+          setSelected(date);
+          open(date);
+        }}
       />
       <Card>
-        <SectionTitle
-          title={dayText(selected, prefs.language, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        />
-        {slots.length ? (
-          slots.map((s) => (
+        <View style={{ gap: 4 }}>
+          <Txt size={20} weight="bold" heading>
+            {dayText(selected, prefs.language, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </Txt>
+          <Row style={{ gap: 6 }}>
+            <Icon
+              name={day ? "checkmark-circle" : "ellipse-outline"}
+              color={day ? colors.accent : colors.muted}
+              size={16}
+            />
+            <Txt muted={!day} color={day ? colors.accent : undefined} size={12}>
+              {t(day ? "confirmedDayOff" : "notConfirmed")}
+            </Txt>
+          </Row>
+        </View>
+        <View
+          style={{
+            marginTop: 18,
+            paddingTop: 16,
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+            gap: 10,
+          }}
+        >
+          <Txt weight="semibold" size={13}>
+            {t("playTime")}
+          </Txt>
+          {slots.map((s) => (
             <Press
               key={s.id}
-              label={`${t(s.status)} ${time(s.start)} ${time(s.end)} ${t("edit")}`}
-              onPress={() => setOverlay({ kind: "slot", slot: s })}
+              label={
+                time(s.start) + " – " + time(s.end) + ", " + t("editPlayTime")
+              }
+              onPress={() =>
+                setOverlay({ kind: "slot", day: selected, slot: s })
+              }
             >
-              <Row
-                style={{
-                  paddingVertical: 14,
-                  borderBottomColor: colors.line,
-                  borderBottomWidth: 1,
-                }}
-              >
-                <View
-                  style={{
-                    width: 4,
-                    height: 40,
-                    borderRadius: 3,
-                    backgroundColor:
-                      s.status === "yes"
-                        ? colors.green
-                        : s.status === "maybe"
-                          ? colors.peachText
-                          : colors.muted,
-                  }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Txt size={16} weight="semibold">
-                    {time(s.start)} – {time(s.end)}
-                  </Txt>
-                  <Txt size={11} muted>
-                    {t("yourTime")} · {zone.split("/").at(-1)}
-                  </Txt>
-                </View>
-                <Pill
-                  label={t(s.status)}
-                  tone={
-                    s.status === "yes"
-                      ? "green"
-                      : s.status === "maybe"
-                        ? "peach"
-                        : "muted"
-                  }
-                />
-                <Icon name="create-outline" color={colors.accent} size={19} />
+              <Row between>
+                <Txt size={21} weight="semibold" style={{ flex: 1 }}>
+                  {time(s.start)} – {time(s.end)}
+                  {localDate(s.end, day!.zone) !== day!.date ? " (+1)" : ""}
+                </Txt>
+                <Icon name="create-outline" color={colors.accent} size={20} />
               </Row>
             </Press>
-          ))
-        ) : (
-          <Empty
-            title={t("emptyDay")}
-            action={{
-              title: t("addAvailability"),
-              onPress: () => setOverlay({ kind: "slot", day: selected }),
-            }}
+          ))}
+          {!slots.length && (
+            <Txt muted size={14}>
+              {day ? t("noPlayTimeYet") : t("dayOffRequired")}
+            </Txt>
+          )}
+          {day && (
+            <Txt muted size={12}>
+              {t("savedZone")}: {day.zone}
+              {slots.length ? " · " + t("yourTime") + ": " + zone : ""}
+            </Txt>
+          )}
+        </View>
+        {day && (
+          <Button
+            title={t("removeDayOff")}
+            kind="text"
+            icon="close-circle-outline"
+            style={{ marginTop: 12 }}
+            onPress={() =>
+              setOverlay({
+                kind: "confirm",
+                title: t("removeDayOff"),
+                description: t("removeDayOffDescription"),
+                onConfirm: () => removeDayOff(selected),
+              })
+            }
           />
         )}
       </Card>
-      <Card>
-        <SectionTitle
-          title={t("otherMembers")}
-          description={t("yourTime") + " · " + zone.split("/").at(-1)}
-        />
-        {group?.members
-          .filter((m) => m.id !== profile.id)
-          .map((m) => {
-            const list = availabilityForDay(m.slots, selected, zone);
-            return (
-              <View key={m.id} style={{ paddingVertical: 15, gap: 12 }}>
-                <Row>
-                  <Avatar person={m} />
-                  <View style={{ flex: 1 }}>
-                    <Txt weight="semibold" size={13}>
-                      {m.nickname}
-                    </Txt>
-                    <Txt size={10} muted>
-                      {m.zone.split("/").at(-1)}
-                    </Txt>
-                  </View>
-                  <Pill
-                    label={list.length ? t(list[0].status) : t("notFilled")}
-                    tone={list[0]?.status === "yes" ? "green" : "muted"}
-                  />
-                </Row>
-                {list.map((s) => (
-                  <Row key={s.id} between style={{ marginLeft: 54 }}>
-                    <Txt size={12} muted>
-                      {time(s.start)} – {time(s.end)}
-                    </Txt>
-                    <Txt
-                      size={10}
-                      color={s.status === "yes" ? colors.green : colors.muted}
-                    >
-                      {t(s.status)}
-                    </Txt>
-                  </Row>
-                ))}
-                <Divider />
-              </View>
-            );
-          })}
-        {!group && <Empty title={t("joinFirst")} icon="people-outline" />}
-      </Card>
+      <FriendsSchedule date={selected} />
     </Screen>
   );
 }
