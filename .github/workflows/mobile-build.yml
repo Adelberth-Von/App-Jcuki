@@ -15,7 +15,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: jcuki-mobile-${{ github.ref }}
+  # Keep a native compilation running when a newer commit is pushed.
+  # Repeated runs of the same commit can still replace each other.
+  group: jcuki-mobile-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 env:
