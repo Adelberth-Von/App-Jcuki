@@ -165,6 +165,7 @@ export function Press({
         onPress={onPress}
         disabled={disabled}
         accessibilityRole={role}
+        aria-checked={role === "switch" ? selected : undefined}
         accessibilityLabel={label}
         accessibilityState={{
           disabled,
@@ -671,6 +672,9 @@ export function ToggleRow({
       >
         <View
           pointerEvents="none"
+          aria-hidden
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           style={{
             minWidth: 52,
             minHeight: 48,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { useMinuteClock } from "../hooks/useMinuteClock";
@@ -10,7 +10,6 @@ import {
   localDate,
   matchingSlots,
   paginate,
-  weekStart,
   withoutBookedTime,
   zoneAbbreviation,
 } from "../lib/domain";
@@ -55,7 +54,10 @@ export function WeekStrip({
     Math.min(78, (Math.min(width, 820) - 80 - 36) / 7),
   );
   const mine = group?.members.find((m) => m.id === profile.id)?.slots || [];
-  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(start, i)),
+    [start],
+  );
   const count = mine.filter(
     (s) =>
       s.status === "yes" &&
@@ -72,7 +74,7 @@ export function WeekStrip({
         ),
         animated: false,
       });
-  }, [selected, start, width, itemWidth]);
+  }, [selected, days, width, itemWidth]);
   return (
     <Card>
       <Row between style={{ marginBottom: 18 }}>
@@ -241,7 +243,7 @@ export function StatusPill({ event }: { event: Event }) {
   );
 }
 export function Upcoming() {
-  const { t, group, colors, time, date, setOverlay } = useApp();
+  const { t, group, time, date, setOverlay } = useApp();
   const e = group?.events
     .filter((e) =>
       ["confirmed", "pending"].includes(eventState(e, group.members)),
