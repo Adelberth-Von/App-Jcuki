@@ -923,14 +923,14 @@ export function OverlayHost() {
                 key={overlay.slot?.id || overlay.day || "new"}
                 overlay={overlay}
               />
-            )}{" "}
-            {overlay.kind === "event" && <EventForm overlay={overlay} />}{" "}
-            {overlay.kind === "createGroup" && <GroupForm join={false} />}{" "}
-            {overlay.kind === "joinGroup" && <GroupForm join />}{" "}
-            {overlay.kind === "invite" && <Invite />}{" "}
-            {overlay.kind === "details" && <Details id={overlay.id} />}{" "}
-            {overlay.kind === "zone" && <ZonePicker />}{" "}
-            {overlay.kind === "connection" && <Connection />}{" "}
+            )}
+            {overlay.kind === "event" && <EventForm overlay={overlay} />}
+            {overlay.kind === "createGroup" && <GroupForm join={false} />}
+            {overlay.kind === "joinGroup" && <GroupForm join />}
+            {overlay.kind === "invite" && <Invite />}
+            {overlay.kind === "details" && <Details id={overlay.id} />}
+            {overlay.kind === "zone" && <ZonePicker />}
+            {overlay.kind === "connection" && <Connection />}
             {overlay.kind === "choice" &&
               overlay.choices.map((choice) => (
                 <Press
@@ -963,7 +963,7 @@ export function OverlayHost() {
                     )}
                   </Row>
                 </Press>
-              ))}{" "}
+              ))}
             {overlay.kind === "confirm" && (
               <>
                 <Txt size={13} muted>
