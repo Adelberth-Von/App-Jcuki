@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "JCuki",
+    "NSPhotoLibraryUsageDescription": "Pilih foto dari galeri untuk profil JCuki kamu. Hanya foto yang kamu pilih yang digunakan."
+  },
+  "android": { "app_name": "JCuki" }
+}

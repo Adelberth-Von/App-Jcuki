@@ -1,0 +1,2 @@
+# Optional browser preview origins. Native Android/iOS clients do not send an Origin header.
+ALLOWED_ORIGINS=http://localhost:8081,http://localhost:19006

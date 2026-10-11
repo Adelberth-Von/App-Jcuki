@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/jcuki_widget_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center_vertical"
+    android:padding="16dp" android:background="@drawable/jcuki_widget_light">
+    <TextView android:id="@+id/jcuki_widget_brand" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="JCuki" android:textSize="13sp" android:textStyle="bold" android:textColor="#226F50" />
+    <TextView android:id="@+id/jcuki_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/jcuki_widget_empty" android:textSize="19sp" android:textStyle="bold" android:textColor="#172C28" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/jcuki_widget_date" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textSize="13sp" android:textColor="#546960" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/jcuki_widget_time" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="17sp" android:textStyle="bold" android:textColor="#546960" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/jcuki_widget_group" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="12sp" android:textColor="#546960" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>

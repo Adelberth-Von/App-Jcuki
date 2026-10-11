@@ -1,0 +1,141 @@
+name: JCuki mobile build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_ios:
+        description: Also compile the iOS simulator app (requires a macOS runner)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jcuki-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "1"
+  EXPO_NO_TELEMETRY: "1"
+  # Optional public API endpoint. This is configuration, never an authentication token.
+  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+
+jobs:
+  checks:
+    name: TypeScript, lint, and behavior tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  android:
+    name: Standalone Android 13+ preview APK
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - name: Install the Android build dependencies
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+      - name: Generate native Android project from Expo config
+        run: npx expo prebuild --platform android --no-install
+      - name: Verify preview signing configuration
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+          const release = gradle.split(/release\s*\{/)[1];
+          if (!release?.includes('signingConfig signingConfigs.debug')) {
+            throw new Error('Expected Expo preview debug-key signing. Configure production signing explicitly before changing this job.');
+          }
+          NODE
+      - name: Build bundled, installable APK
+        working-directory: android
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace --max-workers=2
+      - name: Verify Android version and package signature
+        run: |
+          apk='android/app/build/outputs/apk/release/app-release.apk'
+          test -f "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          minimum="$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest min-sdk "$apk")"
+          test "$minimum" = '33'
+          mkdir -p artifacts
+          cp "$apk" artifacts/JCuki-Android13-preview.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JCuki-Android13-preview
+          path: artifacts/JCuki-Android13-preview.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build result
+        run: |
+          printf '%s\n' '### JCuki Android preview' 'Download the APK from this run’s Artifacts section and install it on Android 13 or later.' 'This standalone preview uses the Expo template debug signing key and includes its JavaScript bundle. Metro is not required.' 'Use a private production signing key or EAS production profile before publishing to Google Play.' >> "$GITHUB_STEP_SUMMARY"
+
+  ios-simulator:
+    name: Optional iOS simulator compilation
+    if: github.event_name == 'workflow_dispatch' && inputs.build_ios
+    needs: checks
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Verify SDK 57 Xcode requirement
+        run: |
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
+          xcodebuild -showsdks
+      - run: npm ci
+      - name: Generate native iOS project and widget extension
+        run: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+      - name: Compile iOS simulator app without device signing
+        run: |
+          workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$workspace"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" \
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath work/ios-simulator \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - name: Simulator validation result
+        run: |
+          printf '%s\n' '### JCuki iOS compilation' 'The application and widget extension compiled for iOS Simulator.' 'This job does not create an installable iPhone IPA. Physical iPhone distribution requires Apple signing through EAS or Xcode.' >> "$GITHUB_STEP_SUMMARY"

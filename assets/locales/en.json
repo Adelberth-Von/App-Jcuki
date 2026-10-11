@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "JCuki",
+    "NSPhotoLibraryUsageDescription": "Choose a photo from your gallery to personalize your JCuki profile. Only the photo you select is used."
+  },
+  "android": { "app_name": "JCuki" }
+}

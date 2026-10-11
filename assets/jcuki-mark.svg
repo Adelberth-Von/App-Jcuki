@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>JCuki — time together</title>
+  <rect width="1024" height="1024" fill="#5B51D8" />
+  <g transform="translate(512 512) rotate(-35)" fill="none" stroke="#FFFFFF" stroke-width="54">
+    <rect x="-285" y="-108" width="360" height="216" rx="108" />
+    <rect x="-75" y="-108" width="360" height="216" rx="108" />
+  </g>
+</svg>

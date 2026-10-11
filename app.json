@@ -1,25 +1,135 @@
 {
   "expo": {
-    "name": "jcuki-mobile",
-    "slug": "jcuki-mobile",
+    "name": "JCuki",
+    "slug": "jcuki",
+    "scheme": "jcuki",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F6F6FA",
+    "locales": {
+      "id": "./assets/locales/id.json",
+      "en": "./assets/locales/en.json"
+    },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.terrence.jcuki",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "CFBundleLocalizations": ["id", "en"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.terrence.jcuki",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#5B51D8",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true,
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      "expo-localization",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-system-ui",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 33,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140,
+          "resizeMode": "contain",
+          "backgroundColor": "#F6F6FA",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#12131C"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#5B51D8",
+          "defaultChannel": "jcuki-reminders-v1",
+          "sounds": ["./assets/sounds/jcuki_chime.wav"]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo from your gallery to personalize your JCuki profile. Only the photo you select is used.",
+          "cameraPermission": false,
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#5B51D8",
+            "cropToolbarIconColor": "#FFFFFF",
+            "cropToolbarActionTextColor": "#FFFFFF",
+            "cropBackgroundColor": "#F6F6FA"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#1C1E2A",
+              "cropToolbarIconColor": "#F3F3FA",
+              "cropToolbarActionTextColor": "#ACA6FF",
+              "cropBackgroundColor": "#12131C"
+            }
+          }
+        }
+      ],
+      "./plugins/withAgendaWidget.cjs",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.terrence.jcuki.widgets",
+          "groupIdentifier": "group.com.terrence.jcuki",
+          "widgets": [
+            {
+              "name": "JCukiAgenda",
+              "displayName": "JCuki agenda",
+              "description": "Your next shared plan in your local time.",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"]
+              }
+            }
+          ]
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "signature": "Develop by Terrence"
     }
   }
 }
