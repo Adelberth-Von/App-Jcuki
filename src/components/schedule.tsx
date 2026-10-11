@@ -372,6 +372,7 @@ export function Upcoming() {
           title={e ? t("respond") : t("makePlan")}
           icon={e ? "arrow-forward" : "add"}
           kind="secondary"
+          textColor="#222334"
           onPress={() =>
             setOverlay(e ? { kind: "details", id: e.id } : { kind: "event" })
           }

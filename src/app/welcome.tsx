@@ -6,6 +6,7 @@ import {
 } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp } from "../store";
+import { goBack } from "../navigation";
 import {
   Avatar,
   Brand,
@@ -166,7 +167,7 @@ export default function Welcome() {
     try {
       await saveProfile(nickname);
       if (editing) {
-        router.back();
+        goBack();
         return;
       }
       router.replace("/(tabs)/groups");
@@ -202,7 +203,7 @@ export default function Welcome() {
               <IconButton
                 icon="arrow-back"
                 label={t("back")}
-                onPress={() => router.back()}
+                onPress={goBack}
               />
             ) : (
               <Brand />

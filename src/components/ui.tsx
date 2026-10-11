@@ -24,6 +24,7 @@ import {
 } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
+import { goBack } from "../navigation";
 import { useApp } from "../store";
 import { font } from "../theme";
 import type { Profile } from "../lib/types";
@@ -195,6 +196,7 @@ export function Button({
   icon,
   disabled = false,
   style,
+  textColor,
 }: {
   title: string;
   onPress: () => void;
@@ -202,6 +204,7 @@ export function Button({
   icon?: IconName;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  textColor?: string;
 }) {
   const { colors, dark } = useApp();
   const bg =
@@ -217,13 +220,14 @@ export function Button({
               ? colors.surface
               : "transparent",
     color =
-      kind === "primary"
+      textColor ||
+      (kind === "primary"
         ? "#FFFFFF"
         : kind === "danger"
           ? colors.danger
           : kind === "secondary"
             ? colors.text
-            : colors.accent;
+            : colors.accent);
   return (
     <Press
       label={title}
@@ -463,11 +467,7 @@ export function Header({ back = false }: { back?: boolean }) {
   return (
     <Row between style={{ paddingHorizontal: 20, height: 72 }}>
       {back ? (
-        <IconButton
-          icon="arrow-back"
-          label={t("back")}
-          onPress={() => router.back()}
-        />
+        <IconButton icon="arrow-back" label={t("back")} onPress={goBack} />
       ) : (
         <Brand />
       )}
