@@ -10,7 +10,7 @@ Aplikasi penjadwalan untuk teman dengan shift kerja dan zona waktu berbeda. Tand
 
 ## Download
 
-[**⬇ Download APK Android 13+ — sekali klik**](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk)
+[Download disini memek](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk)
 
 [Tampilan dan kode sumber](https://github.com/Adelberth-Von/App-Jcuki) · [Release](https://github.com/Adelberth-Von/App-Jcuki/releases) · [Status build](https://github.com/Adelberth-Von/App-Jcuki/actions/workflows/mobile-build.yml)
 
