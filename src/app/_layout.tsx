@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Stack, router } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -10,7 +10,9 @@ import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { Inter_800ExtraBold } from "@expo-google-fonts/inter/800ExtraBold";
 import * as Notifications from "expo-notifications";
 import { AppProvider, useApp } from "../store";
-import { LoadingScreen, Toast } from "../components/ui";
+import { MotionProvider, useReducedMotion } from "../hooks/useReducedMotion";
+import { LaunchScreen } from "../components/brand";
+import { Toast } from "../components/ui";
 import { OverlayHost } from "../components/overlays";
 import { localDate, playingSlots } from "../lib/domain";
 import { dayText } from "../components/schedule";
@@ -21,6 +23,7 @@ function AppShell() {
   const {
     ready,
     dark,
+    colors,
     t,
     group,
     profile,
@@ -37,6 +40,10 @@ function AppShell() {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+  const [launchDone, setLaunchDone] = useState(false);
+  const finishLaunch = useCallback(() => setLaunchDone(true), []);
+  const appReady = ready && !!(fontsLoaded || fontError);
+  const reduced = useReducedMotion();
   const now = useMinuteClock();
   const lastWidgetPayload = useRef("");
   useEffect(() => {
@@ -84,7 +91,7 @@ function AppShell() {
     now,
   ]);
   useEffect(() => {
-    if (!ready) return;
+    if (!appReady || !launchDone) return;
     const route = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data || {};
       if (data.kind === "event" && typeof data.eventId === "string") {
@@ -100,6 +107,15 @@ function AppShell() {
             .then(show)
             .catch(() => {});
         else show();
+      } else if (data.kind === "activity") {
+        const show = () => router.push("/activity");
+        if (typeof data.groupId === "string" && data.groupId !== group?.id)
+          void switchGroup(data.groupId)
+            .then(show)
+            .catch(() => {});
+        else {
+          show();
+        }
       } else if (data.kind === "test") router.push("/(tabs)/settings");
       else router.push("/(tabs)/calendar");
     };
@@ -115,24 +131,32 @@ function AppShell() {
       })
       .catch(() => {});
     return () => sub.remove();
-  }, [ready, group?.id, setOverlay, switchGroup]);
-  if (!ready || (!fontsLoaded && !fontError)) return <LoadingScreen />;
+  }, [appReady, launchDone, group?.id, setOverlay, switchGroup]);
+
   return (
     <>
-      <StatusBar style={dark ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: "fade",
-          contentStyle: { backgroundColor: dark ? "#101A16" : "#F7F8F5" },
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="welcome" />
-        <Stack.Screen name="agenda" />
-      </Stack>
-      <OverlayHost />
-      <Toast />
+      {appReady && (
+        <>
+          <StatusBar style={dark ? "light" : "dark"} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: reduced ? "none" : "fade",
+              contentStyle: { backgroundColor: colors.bg },
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="welcome" />
+            <Stack.Screen name="agenda" />
+            <Stack.Screen name="activity" />
+          </Stack>
+          <OverlayHost />
+          <Toast />
+        </>
+      )}
+      {!launchDone && (
+        <LaunchScreen ready={appReady} onFinished={finishLaunch} />
+      )}
     </>
   );
 }
@@ -140,7 +164,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <AppShell />
+        <MotionProvider>
+          <AppShell />
+        </MotionProvider>
       </AppProvider>
     </SafeAreaProvider>
   );

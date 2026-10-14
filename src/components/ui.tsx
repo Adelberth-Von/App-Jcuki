@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  AccessibilityInfo,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -28,6 +27,8 @@ import { goBack } from "../navigation";
 import { useApp } from "../store";
 import { font } from "../theme";
 import type { Profile } from "../lib/types";
+import { LogoMark, LaunchScreen } from "./brand";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 export function Icon({
   name,
@@ -123,8 +124,8 @@ export function Card({
           backgroundColor: colors.surface,
           borderColor: colors.line,
           borderWidth: 1,
-          borderRadius: 20,
-          padding: 18,
+          borderRadius: 26,
+          padding: 20,
         },
         style,
       ]}
@@ -151,13 +152,25 @@ export function Press({
   role?: "button" | "tab" | "switch";
 }) {
   const [scale] = useState(() => new Animated.Value(1));
-  const press = (to: number) =>
+  const reduced = useReducedMotion();
+  const press = (to: number) => {
+    if (reduced) {
+      scale.setValue(1);
+      return;
+    }
     Animated.spring(scale, {
       toValue: to,
       useNativeDriver: true,
-      speed: 35,
+      speed: 40,
       bounciness: 0,
     }).start();
+  };
+  useEffect(() => {
+    if (reduced) {
+      scale.stopAnimation();
+      scale.setValue(1);
+    }
+  }, [reduced, scale]);
   return (
     <Animated.View
       style={[{ transform: [{ scale }], opacity: disabled ? 0.45 : 1 }, style]}
@@ -173,7 +186,7 @@ export function Press({
           selected,
           ...(role === "switch" ? { checked: selected } : {}),
         }}
-        onPressIn={() => press(0.96)}
+        onPressIn={() => press(0.985)}
         onPressOut={() => press(1)}
         style={({ pressed }) => [
           {
@@ -243,7 +256,7 @@ export function Button({
     >
       <Row
         style={{
-          minHeight: 52,
+          minHeight: 56,
           justifyContent: "center",
           paddingHorizontal: 18,
           paddingVertical: 12,
@@ -251,7 +264,12 @@ export function Button({
         }}
       >
         {icon && <Icon name={icon} color={color} size={19} />}
-        <Txt weight="semibold" size={13} color={color}>
+        <Txt
+          weight="semibold"
+          size={14}
+          color={color}
+          style={{ flexShrink: 1, textAlign: "center" }}
+        >
           {title}
         </Txt>
       </Row>
@@ -264,16 +282,19 @@ export function IconButton({
   label,
   color,
   soft = false,
+  disabled = false,
 }: {
   icon: IconName;
   onPress: () => void;
   label: string;
   color?: string;
   soft?: boolean;
+  disabled?: boolean;
 }) {
   const { colors } = useApp();
   return (
     <Press
+      disabled={disabled}
       label={label}
       onPress={onPress}
       style={{
@@ -353,18 +374,7 @@ export function Brand() {
   const { colors } = useApp();
   return (
     <Row style={{ gap: 9 }}>
-      <View
-        style={{
-          width: 33,
-          height: 33,
-          backgroundColor: colors.accent,
-          borderRadius: 11,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Icon name="link" color={colors.onAccent} size={23} />
-      </View>
+      <LogoMark size={42} />
       <Txt size={23} weight="bold" style={{ letterSpacing: -1 }}>
         JCuki
         <Txt color={colors.accent} size={23} weight="bold">
@@ -397,9 +407,9 @@ export function Pill({
       style={{
         gap: 5,
         alignSelf: "flex-start",
-        paddingHorizontal: 9,
+        paddingHorizontal: 11,
         paddingVertical: 5,
-        borderRadius: 8,
+        borderRadius: 30,
         backgroundColor:
           tone === "green"
             ? colors.greenSoft
@@ -440,7 +450,12 @@ export function SectionTitle({
   return (
     <Row between style={{ marginBottom: 15, gap: 8 }}>
       <View style={{ flex: 1 }}>
-        <Txt size={18} weight="bold" heading style={{ letterSpacing: -0.5 }}>
+        <Txt
+          size={19}
+          weight="semibold"
+          heading
+          style={{ letterSpacing: -0.6 }}
+        >
           {title}
         </Txt>
         {description && (
@@ -461,23 +476,50 @@ export function SectionTitle({
   );
 }
 export function Header({ back = false }: { back?: boolean }) {
-  const { profile, t } = useApp();
+  const { profile, t, colors, activityUnread } = useApp();
   return (
-    <Row between style={{ paddingHorizontal: 20, height: 72 }}>
+    <Row between style={{ paddingHorizontal: 22, minHeight: 78 }}>
       {back ? (
         <IconButton icon="arrow-back" label={t("back")} onPress={goBack} />
       ) : (
         <Brand />
       )}
       <Row style={{ gap: 6 }}>
-        <IconButton
-          icon="notifications-outline"
-          label={t("reminders")}
-          onPress={() => router.push("/(tabs)/settings")}
-        />
+        <View>
+          <IconButton
+            icon="notifications-outline"
+            label={t("activityTitle")}
+            onPress={() => router.push("/activity")}
+          />
+          {activityUnread > 0 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 9,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: colors.peachText,
+                borderWidth: 2,
+                borderColor: colors.bg,
+              }}
+            />
+          )}
+        </View>
         <Press
           label={t("profile")}
           onPress={() => router.push("/welcome?edit=1")}
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            borderWidth: 1,
+            borderColor: colors.line,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
           <Avatar person={profile} size={38} />
         </Press>
@@ -508,7 +550,7 @@ export function Screen({
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
       <View
-        style={{ flex: 1, width: "100%", maxWidth: 820, alignSelf: "center" }}
+        style={{ flex: 1, width: "100%", maxWidth: 620, alignSelf: "center" }}
       >
         <Header back={back} />
         {scroll ? (
@@ -523,24 +565,24 @@ export function Screen({
               />
             }
             contentContainerStyle={{
-              paddingHorizontal: 20,
-              paddingTop: 8,
-              paddingBottom: action ? 105 : 30,
-              gap: 22,
+              paddingHorizontal: 22,
+              paddingTop: 12,
+              paddingBottom: action ? 120 : 32,
+              gap: 24,
             }}
           >
             {title && (
               <View>
                 <Txt
-                  size={30}
-                  weight="bold"
+                  size={34}
+                  weight="semibold"
                   heading
                   style={{ letterSpacing: -1.1 }}
                 >
                   {title}
                 </Txt>
                 {description && (
-                  <Txt size={12} muted style={{ marginTop: 7 }}>
+                  <Txt size={14} muted style={{ marginTop: 7 }}>
                     {description}
                   </Txt>
                 )}
@@ -555,19 +597,21 @@ export function Screen({
           <View
             style={{
               position: "absolute",
-              bottom: 12,
-              left: 20,
-              right: 20,
+              bottom: 0,
+              left: 0,
+              right: 0,
               backgroundColor: colors.bg,
-              paddingTop: 8,
-              borderRadius: 18,
+              paddingTop: 12,
+              paddingHorizontal: 22,
+              paddingBottom: 12,
+              borderTopWidth: 1,
+              borderTopColor: colors.line,
             }}
           >
             <Button
               title={action.title}
               onPress={action.onPress}
               icon={action.icon || "add"}
-              style={{ boxShadow: "0 4px 12px rgba(20,60,40,0.10)" }}
             />
           </View>
         )}
@@ -584,6 +628,7 @@ export function Field({
   ...props
 }: TextInputProps & { label: string; style?: StyleProp<TextStyle> }) {
   const { colors } = useApp();
+  const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 7 }}>
       <Txt size={12} weight="semibold">
@@ -595,10 +640,10 @@ export function Field({
         style={[
           {
             minHeight: 54,
-            borderRadius: 14,
+            borderRadius: 16,
             borderWidth: 1,
-            borderColor: colors.line,
-            backgroundColor: colors.bg,
+            borderColor: focused ? colors.accent : colors.line,
+            backgroundColor: colors.surface,
             paddingHorizontal: 14,
             paddingVertical: 13,
             fontFamily: font.medium,
@@ -608,6 +653,14 @@ export function Field({
           style,
         ]}
         {...props}
+        onFocus={(event) => {
+          setFocused(true);
+          props.onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          props.onBlur?.(event);
+        }}
       />
     </View>
   );
@@ -628,10 +681,10 @@ export function SelectRow({
     <Press label={label + ": " + value} onPress={onPress}>
       <Row between style={{ paddingVertical: 12, minHeight: 56 }}>
         {icon && <Icon name={icon} color={colors.muted} />}
-        <Txt size={13} weight="medium" style={{ flex: 1 }}>
+        <Txt size={14} weight="medium" style={{ flex: 1 }}>
           {label}
         </Txt>
-        <Txt size={12} muted style={{ maxWidth: "52%" }}>
+        <Txt size={13} muted style={{ maxWidth: "48%" }}>
           {value}
         </Txt>
         <Icon name="chevron-forward" color={colors.muted} size={17} />
@@ -752,29 +805,27 @@ export function Skeleton({
 }) {
   const { colors } = useApp();
   const [value] = useState(() => new Animated.Value(1));
+  const reduced = useReducedMotion();
   useEffect(() => {
-    let loop: Animated.CompositeAnimation | undefined;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!reduce) {
-        loop = Animated.loop(
-          Animated.sequence([
-            Animated.timing(value, {
-              toValue: 0.4,
-              duration: 650,
-              useNativeDriver: true,
-            }),
-            Animated.timing(value, {
-              toValue: 1,
-              duration: 650,
-              useNativeDriver: true,
-            }),
-          ]),
-        );
-        loop.start();
-      }
-    });
-    return () => loop?.stop();
-  }, [value]);
+    value.setValue(1);
+    if (reduced) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(value, {
+          toValue: 0.4,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+        Animated.timing(value, {
+          toValue: 1,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [value, reduced]);
   return (
     <Animated.View
       style={{
@@ -788,17 +839,7 @@ export function Skeleton({
   );
 }
 export function LoadingScreen() {
-  const { colors } = useApp();
-  return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.bg, padding: 20, gap: 22 }}
-    >
-      <Brand />
-      <Skeleton height={35} width="65%" />
-      <Skeleton height={220} />
-      <Skeleton height={160} />
-    </SafeAreaView>
-  );
+  return <LaunchScreen />;
 }
 export function Pager({
   page,
@@ -821,28 +862,50 @@ export function Pager({
         borderTopColor: colors.line,
       }}
     >
-      <Button
-        title={t("previous")}
+      <IconButton
+        icon="chevron-back"
+        label={t("previous")}
         onPress={() => onPage(page - 1)}
-        kind="text"
-        disabled={page === 1}
+        disabled={page <= 1}
+        soft
       />
-      <Txt size={11} muted>
-        {t("page")} {page} {t("of")} {pages}
-      </Txt>
-      <Button
-        title={t("next")}
+      <View
+        style={{
+          backgroundColor: colors.surfaceAlt,
+          borderRadius: 30,
+          paddingHorizontal: 16,
+          paddingVertical: 9,
+        }}
+      >
+        <Txt size={13} weight="medium" muted>
+          {t("page")} {page} {t("of")} {pages}
+        </Txt>
+      </View>
+      <IconButton
+        icon="chevron-forward"
+        label={t("next")}
         onPress={() => onPage(page + 1)}
-        kind="text"
-        disabled={page === pages}
+        disabled={page >= pages}
+        soft
       />
     </Row>
   );
 }
-export function Toast() {
-  const { message, colors } = useApp();
+export function Toast({ inModal = false }: { inModal?: boolean }) {
+  const { message, colors, overlay } = useApp();
   const insets = useSafeAreaInsets();
-  if (!message) return null;
+  const formOwnsFeedback =
+    overlay &&
+    [
+      "slot",
+      "dayOff",
+      "event",
+      "createGroup",
+      "joinGroup",
+      "connection",
+    ].includes(overlay.kind);
+  if (!message || (!inModal && overlay) || (inModal && formOwnsFeedback))
+    return null;
   return (
     <View
       pointerEvents="none"

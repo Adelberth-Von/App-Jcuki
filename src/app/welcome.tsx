@@ -7,10 +7,12 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp } from "../store";
 import { goBack } from "../navigation";
+import { zoneAbbreviation } from "../lib/domain";
 import {
   Avatar,
   Brand,
   Button,
+  Card,
   Field,
   Icon,
   IconButton,
@@ -18,168 +20,52 @@ import {
   Row,
   Txt,
 } from "../components/ui";
-function TogetherIllustration() {
-  const { colors, dark } = useApp();
-  return (
-    <View
-      accessible={false}
-      style={{
-        height: 220,
-        alignItems: "center",
-        justifyContent: "center",
-        marginVertical: 8,
-      }}
-    >
-      <View
-        style={{
-          position: "absolute",
-          width: 216,
-          height: 216,
-          borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: 108,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          width: 150,
-          height: 150,
-          borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: 75,
-        }}
-      />
-      <View
-        style={{
-          width: 91,
-          height: 91,
-          backgroundColor: "#185F50",
-          borderRadius: 30,
-          justifyContent: "center",
-          alignItems: "center",
-          transform: [{ rotate: "-9deg" }],
-          boxShadow: "0 12px 36px rgba(20,60,40,0.14)",
-        }}
-      >
-        <Icon name="link" color="#FFFFFF" size={57} />
-      </View>
-      <View
-        style={{
-          position: "absolute",
-          left: "10%",
-          top: 24,
-          backgroundColor: colors.surface,
-          borderColor: colors.line,
-          borderWidth: 1,
-          borderRadius: 20,
-          padding: 15,
-          transform: [{ rotate: "-6deg" }],
-        }}
-      >
-        <Row style={{ gap: 8 }}>
-          <View
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: colors.green,
-            }}
-          />
-          <Txt size={10} muted>
-            BERLIN
-          </Txt>
-        </Row>
-        <Txt size={26} weight="bold" style={{ letterSpacing: -1 }}>
-          15:00
-        </Txt>
-        <Txt size={10} muted>
-          CET / CEST
-        </Txt>
-      </View>
-      <View
-        style={{
-          position: "absolute",
-          right: "6%",
-          bottom: 13,
-          backgroundColor: dark ? colors.surface : "#FAEFE5",
-          borderRadius: 20,
-          padding: 15,
-          transform: [{ rotate: "5deg" }],
-        }}
-      >
-        <Row style={{ gap: 8 }}>
-          <View
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: colors.peachText,
-            }}
-          />
-          <Txt size={10} muted>
-            JAKARTA
-          </Txt>
-        </Row>
-        <Txt size={26} weight="bold" style={{ letterSpacing: -1 }}>
-          20:00
-        </Txt>
-        <Txt size={10} muted>
-          WIB
-        </Txt>
-      </View>
-      <View
-        style={{
-          position: "absolute",
-          right: 24,
-          top: 27,
-          width: 33,
-          height: 33,
-          borderRadius: 12,
-          backgroundColor: colors.greenSoft,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Icon name="sparkles-outline" color={colors.green} size={18} />
-      </View>
-    </View>
-  );
-}
 export default function Welcome() {
   const {
-      t,
-      prefs,
-      profile,
-      colors,
-      busy,
-      saveProfile,
-      enterDemo,
-      choosePhoto,
-      updatePrefs,
-      setOverlay,
-    } = useApp(),
-    { edit } = useLocalSearchParams<{ edit?: string }>(),
-    insets = useSafeAreaInsets();
+    t,
+    prefs,
+    profile,
+    colors,
+    busy,
+    saveProfile,
+    enterDemo,
+    choosePhoto,
+    updatePrefs,
+    setOverlay,
+    zone,
+    apiUrl,
+    demoMode,
+  } = useApp();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const editing = edit === "1",
+    inset = useSafeAreaInsets();
   const [nickname, setNickname] = useState(profile.nickname);
-  const editing = edit === "1";
-  async function start() {
+  const [step, setStep] = useState<"profile" | "circle">("profile");
+  const [error, setError] = useState("");
+  async function next() {
+    setError("");
     try {
       await saveProfile(nickname);
       if (editing) {
         goBack();
         return;
       }
-      router.replace("/(tabs)/groups");
-      setOverlay({ kind: "createGroup" });
-    } catch {}
+      setStep("circle");
+    } catch {
+      setError(t("profileSaveError"));
+    }
   }
   async function demo() {
     try {
-      if (nickname.trim()) await saveProfile(nickname);
-      await enterDemo();
+      await enterDemo(nickname.trim() || undefined);
       router.replace("/(tabs)");
-    } catch {}
+    } catch {
+      setError(t("error"));
+    }
+  }
+  function openGroup(join: boolean) {
+    router.replace("/(tabs)/groups");
+    setOverlay({ kind: join ? "joinGroup" : "createGroup" });
   }
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -189,21 +75,22 @@ export default function Welcome() {
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingBottom: 190,
-            paddingTop: 9,
-            maxWidth: 520,
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            paddingBottom: 200,
+            maxWidth: 540,
             width: "100%",
             alignSelf: "center",
           }}
         >
-          <Row between style={{ minHeight: 58 }}>
-            {editing ? (
+          <Row between style={{ minHeight: 68 }}>
+            {editing || step === "circle" ? (
               <IconButton
                 icon="arrow-back"
                 label={t("back")}
-                onPress={goBack}
+                onPress={() => (editing ? goBack() : setStep("profile"))}
               />
             ) : (
               <Brand />
@@ -218,108 +105,266 @@ export default function Welcome() {
               }
             />
           </Row>
-          {!editing && <TogetherIllustration />}
-          <View style={{ marginTop: editing ? 35 : 14 }}>
-            <Txt
-              size={editing ? 32 : 40}
-              weight="bold"
-              heading
-              style={{ letterSpacing: -1.8, lineHeight: editing ? 43 : 47 }}
-            >
-              {editing ? t("editProfile") : t("heroTitle")}
-            </Txt>
-            <Txt
-              size={14}
-              muted
-              style={{ marginTop: 15, lineHeight: 23, maxWidth: 360 }}
-            >
-              {editing ? t("nicknameHelp") : t("heroDescription")}
-            </Txt>
-          </View>
-          <Row style={{ marginVertical: 25, gap: 15 }}>
-            <Press label={t("choosePhoto")} onPress={() => void choosePhoto()}>
-              <View>
-                <Avatar person={profile} size={62} />
+          {!editing && (
+            <Row between style={{ marginTop: 18, marginBottom: 18 }}>
+              <Txt size={12} weight="semibold" color={colors.accent}>
+                {t(
+                  step === "profile" ? "onboardingProfile" : "onboardingCircle",
+                )}
+              </Txt>
+              <Row style={{ gap: 6 }}>
                 <View
                   style={{
-                    position: "absolute",
-                    bottom: -3,
-                    right: -3,
                     width: 26,
-                    height: 26,
-                    borderRadius: 10,
+                    height: 4,
+                    borderRadius: 3,
                     backgroundColor: colors.accent,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 2,
-                    borderColor: colors.bg,
+                  }}
+                />
+                <View
+                  style={{
+                    width: 26,
+                    height: 4,
+                    borderRadius: 3,
+                    backgroundColor:
+                      step === "circle" ? colors.accent : colors.line,
+                  }}
+                />
+              </Row>
+            </Row>
+          )}
+          <Txt
+            size={34}
+            weight="semibold"
+            heading
+            style={{
+              letterSpacing: -1.2,
+              lineHeight: 42,
+              marginTop: editing ? 20 : 0,
+            }}
+          >
+            {editing
+              ? t("editProfile")
+              : step === "profile"
+                ? t("greetingTitle")
+                : t("circleTitle")}
+          </Txt>
+          <Txt size={14} muted style={{ marginTop: 12, lineHeight: 23 }}>
+            {editing
+              ? t("nicknameHelp")
+              : t(
+                  step === "profile"
+                    ? "greetingDescription"
+                    : "circleDescription",
+                )}
+          </Txt>
+          {step === "profile" || editing ? (
+            <>
+              <Card style={{ marginTop: 26 }}>
+                <Row style={{ gap: 16, marginBottom: 20 }}>
+                  <Press
+                    label={t("choosePhoto")}
+                    onPress={() => void choosePhoto()}
+                    disabled={busy}
+                  >
+                    <View>
+                      <Avatar
+                        person={{ ...profile, nickname: nickname || t("you") }}
+                        size={80}
+                      />
+                      <View
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          right: -2,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 10,
+                          backgroundColor: colors.accent,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: 2,
+                          borderColor: colors.surface,
+                        }}
+                      >
+                        <Icon
+                          name="camera-outline"
+                          color={colors.onAccent}
+                          size={15}
+                        />
+                      </View>
+                    </View>
+                  </Press>
+                  <View style={{ flex: 1 }}>
+                    <Txt size={15} weight="semibold">
+                      {t("profilePhoto")}
+                    </Txt>
+                    <Txt muted size={12} style={{ marginTop: 4 }}>
+                      {t("photoOptional")}
+                    </Txt>
+                    <Button
+                      title={t(
+                        profile.avatarUri ? "changePhoto" : "choosePhoto",
+                      )}
+                      kind="text"
+                      onPress={() => void choosePhoto()}
+                      disabled={busy}
+                      style={{ alignSelf: "flex-start", marginLeft: -18 }}
+                    />
+                  </View>
+                </Row>
+                <Field
+                  label={t("nickname")}
+                  value={nickname}
+                  onChangeText={(value) => {
+                    setNickname(value);
+                    setError("");
+                  }}
+                  placeholder={t("nicknamePlaceholder")}
+                  maxLength={24}
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (nickname.trim().length >= 2 && !busy) void next();
+                  }}
+                />
+                <Txt muted size={12} style={{ marginTop: 8 }}>
+                  {t("nicknameHelp")}
+                </Txt>
+              </Card>
+              <Row style={{ marginTop: 18, alignItems: "flex-start", gap: 10 }}>
+                <Icon name="globe-outline" size={18} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Txt size={13} weight="medium">
+                    {zone.split("/").at(-1)?.replace(/_/g, " ")} ·{" "}
+                    {zoneAbbreviation(zone)}
+                  </Txt>
+                  <Txt muted size={12} style={{ marginTop: 3 }}>
+                    {t("zoneAutomaticHint")}
+                  </Txt>
+                </View>
+              </Row>
+            </>
+          ) : (
+            <View style={{ gap: 14, marginTop: 26 }}>
+              {[false, true].map((join) => (
+                <Press
+                  key={String(join)}
+                  label={t(join ? "joinGroup" : "createGroup")}
+                  onPress={() => openGroup(join)}
+                  disabled={!apiUrl || demoMode || busy}
+                >
+                  <Card>
+                    <Row>
+                      <View
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 18,
+                          backgroundColor: colors.accentSoft,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon
+                          name={join ? "ticket-outline" : "people-outline"}
+                          color={colors.accent}
+                          size={25}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Txt size={17} weight="semibold">
+                          {t(join ? "joinGroup" : "createGroup")}
+                        </Txt>
+                        <Txt muted size={12} style={{ marginTop: 4 }}>
+                          {t(join ? "joinCircleHint" : "createCircleHint")}
+                        </Txt>
+                      </View>
+                      <Icon name="arrow-forward" color={colors.accent} />
+                    </Row>
+                  </Card>
+                </Press>
+              ))}
+              {(!apiUrl || demoMode) && (
+                <Card
+                  style={{
+                    backgroundColor: colors.peach,
+                    borderColor: colors.peach,
                   }}
                 >
-                  <Icon
-                    name="camera-outline"
-                    color={colors.surface}
-                    size={14}
+                  <Txt size={14} weight="semibold" color={colors.peachText}>
+                    {t("circleConnectionTitle")}
+                  </Txt>
+                  <Txt
+                    size={13}
+                    color={colors.peachText}
+                    style={{ marginTop: 6 }}
+                  >
+                    {t("circleConnectionHint")}
+                  </Txt>
+                  <Button
+                    title={t("connection")}
+                    kind="text"
+                    onPress={() => setOverlay({ kind: "connection" })}
+                    style={{
+                      alignSelf: "flex-start",
+                      marginTop: 6,
+                      marginLeft: -18,
+                    }}
                   />
-                </View>
-              </View>
-            </Press>
-            <View style={{ flex: 1 }}>
-              <Txt size={13} weight="semibold">
-                {t("choosePhoto")}
-              </Txt>
-              <Txt size={11} muted style={{ marginTop: 3 }}>
-                {t("photoDescription")}
-              </Txt>
+                </Card>
+              )}
             </View>
-          </Row>
-          <Field
-            label={t("nickname")}
-            value={nickname}
-            onChangeText={setNickname}
-            placeholder={t("nicknamePlaceholder")}
-            maxLength={24}
-            autoCapitalize="words"
-            returnKeyType="done"
-            onSubmitEditing={() => void start()}
-          />
-          <Txt size={11} muted style={{ marginTop: 9 }}>
-            {t("nicknameHelp")}
-          </Txt>
+          )}
+          {!!error && (
+            <Txt color={colors.danger} size={13} style={{ marginTop: 16 }}>
+              {error}
+            </Txt>
+          )}
         </ScrollView>
         <View
           style={{
             position: "absolute",
-            bottom: Math.max(12, insets.bottom),
-            left: 20,
-            right: 20,
-            gap: 8,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingHorizontal: 24,
+            paddingTop: 14,
+            paddingBottom: Math.max(16, inset.bottom),
             backgroundColor: colors.bg,
-            paddingTop: 12,
-            maxWidth: 480,
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+            gap: 8,
+            maxWidth: 540,
+            width: "100%",
             alignSelf: "center",
-            width: undefined,
           }}
         >
-          <Button
-            title={editing ? t("save") : t("start")}
-            icon={editing ? "checkmark" : "arrow-forward"}
-            onPress={() => void start()}
-            disabled={busy || nickname.trim().length < 2}
-          />
-          {!editing && (
+          {step === "profile" || editing ? (
+            <Button
+              title={busy ? t("syncing") : t(editing ? "save" : "continue")}
+              icon={editing ? "checkmark" : "arrow-forward"}
+              disabled={busy || nickname.trim().length < 2}
+              onPress={() => void next()}
+            />
+          ) : (
             <Button
               title={t("demo")}
-              onPress={() => void demo()}
-              kind="secondary"
+              icon="sparkles-outline"
               disabled={busy}
+              onPress={() => void demo()}
             />
           )}
-          <Txt
-            size={10}
-            muted
-            style={{ textAlign: "center", paddingVertical: 8 }}
-          >
-            {t("signature")} · {t("nativeBuild")}
+          {!editing && step === "profile" && (
+            <Button
+              title={t("demo")}
+              kind="text"
+              disabled={busy}
+              onPress={() => void demo()}
+            />
+          )}
+          <Txt size={12} muted style={{ textAlign: "center" }}>
+            {editing ? t("signature") : t("demoNote")}
           </Txt>
         </View>
       </KeyboardAvoidingView>

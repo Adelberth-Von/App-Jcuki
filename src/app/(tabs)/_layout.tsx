@@ -9,7 +9,7 @@ export default function TabLayout() {
   const { colors, t } = useApp(),
     insets = useSafeAreaInsets();
   const tabs: [string, string, IconName][] = [
-    ["index", "dashboard", "grid-outline"],
+    ["index", "dashboard", "home-outline"],
     ["calendar", "calendar", "calendar-outline"],
     ["groups", "groups", "people-outline"],
     ["settings", "settings", "options-outline"],
@@ -18,18 +18,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
+        tabBarLabelPosition: "below-icon",
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
-          height: 72 + insets.bottom,
+          height: 76 + insets.bottom,
           paddingBottom: Math.max(10, insets.bottom),
-          paddingTop: 8,
+          paddingTop: 10,
         },
         tabBarItemStyle: { minHeight: 48 },
         tabBarLabelStyle: {
-          fontFamily: font.medium,
+          fontFamily: font.semibold,
           fontSize: 12,
           marginTop: 2,
         },
@@ -46,9 +48,9 @@ export default function TabLayout() {
             tabBarIcon: ({ color, focused }) => (
               <View
                 style={{
-                  width: 48,
-                  height: 30,
-                  borderRadius: 15,
+                  width: 54,
+                  height: 32,
+                  borderRadius: 12,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: focused ? colors.accentSoft : "transparent",

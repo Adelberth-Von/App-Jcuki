@@ -42,6 +42,7 @@ export default function Settings() {
     notify,
     widgetEnabled,
     setWidgetEnabled,
+    pushStatus,
   } = useApp();
   const [testing, setTesting] = useState(false);
   const change = (p: Partial<AppPreferences>) =>
@@ -67,6 +68,17 @@ export default function Settings() {
         return;
       }
       change({ weeklyReminder: { ...prefs.weeklyReminder, enabled: v } });
+    } catch {
+      notify("error");
+    }
+  }
+  async function enableActivity(value: boolean) {
+    try {
+      if (value && !(await requestNotificationPermission(prefs.language))) {
+        notify(Platform.OS === "web" ? "nativeOnly" : "notificationsDenied");
+        return;
+      }
+      await updatePrefs({ activityNotifications: value });
     } catch {
       notify("error");
     }
@@ -106,7 +118,7 @@ export default function Settings() {
               {zone.split("/").at(-1)?.replace(/_/g, " ")}
             </Txt>
           </View>
-          <Icon name="sparkles-outline" color={colors.accent} />
+          <Icon name="person-circle-outline" color={colors.accent} size={28} />
         </Row>
         <Row style={{ marginTop: 17, gap: 8 }}>
           <Button
@@ -132,7 +144,10 @@ export default function Settings() {
         )}
       </Card>
       <Card>
-        <SectionTitle title={t("appearance")} />
+        <SectionTitle
+          title={t("appearance")}
+          description={t("appearanceHint")}
+        />
         <Row style={{ gap: 8 }}>
           {(["light", "dark", "system"] as const).map((mode) => (
             <Press
@@ -149,31 +164,83 @@ export default function Settings() {
                 borderColor: prefs.theme === mode ? colors.accent : colors.line,
               }}
             >
-              <View
-                style={{
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: 84,
-                  gap: 8,
-                }}
-              >
-                <Icon
-                  name={
-                    mode === "light"
-                      ? "sunny-outline"
-                      : mode === "dark"
-                        ? "moon-outline"
-                        : "phone-portrait-outline"
-                  }
-                  color={prefs.theme === mode ? colors.accent : colors.muted}
-                />
+              <View style={{ padding: 10, alignItems: "center", gap: 10 }}>
+                <View
+                  aria-hidden
+                  style={{
+                    height: 78,
+                    width: "100%",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    flexDirection: "row",
+                  }}
+                >
+                  {(mode === "system" ? ["light", "dark"] : [mode]).map(
+                    (preview) => (
+                      <View
+                        key={preview}
+                        style={{
+                          flex: 1,
+                          padding: 8,
+                          gap: 7,
+                          backgroundColor:
+                            preview === "dark" ? "#171F1A" : "#F6F3EB",
+                        }}
+                      >
+                        <View
+                          style={{
+                            height: 4,
+                            width: "55%",
+                            borderRadius: 2,
+                            backgroundColor:
+                              preview === "dark" ? "#B6C1B2" : "#6A7369",
+                          }}
+                        />
+                        <View
+                          style={{
+                            height: 24,
+                            borderRadius: 6,
+                            backgroundColor: "#42664B",
+                            padding: 6,
+                          }}
+                        >
+                          <View
+                            style={{
+                              height: 3,
+                              width: "65%",
+                              borderRadius: 2,
+                              backgroundColor: "#FCF7EB",
+                            }}
+                          />
+                        </View>
+                        <View
+                          style={{
+                            height: 15,
+                            borderRadius: 4,
+                            backgroundColor:
+                              preview === "dark" ? "#334631" : "#E8EEDF",
+                          }}
+                        />
+                      </View>
+                    ),
+                  )}
+                </View>
                 <Txt
-                  size={11}
-                  weight="medium"
+                  size={12}
+                  weight="semibold"
                   color={prefs.theme === mode ? colors.accent : colors.muted}
                 >
                   {t(mode)}
                 </Txt>
+                <Icon
+                  name={
+                    prefs.theme === mode
+                      ? "checkmark-circle"
+                      : "ellipse-outline"
+                  }
+                  size={18}
+                  color={prefs.theme === mode ? colors.accent : colors.muted}
+                />
               </View>
             </Press>
           ))}
@@ -234,51 +301,70 @@ export default function Settings() {
       <Card>
         <SectionTitle title={t("reminders")} />
         <ToggleRow
+          label={t("activityNotifications")}
+          description={t("activityNotificationHint")}
+          value={prefs.activityNotifications}
+          onChange={(value) => void enableActivity(value)}
+        />
+        {prefs.activityNotifications && (
+          <View style={{ marginVertical: 10 }}>
+            <Pill
+              label={t("push_" + pushStatus)}
+              tone={pushStatus === "ready" ? "green" : "peach"}
+            />
+          </View>
+        )}
+        <Divider />
+        <ToggleRow
           label={t("weeklyReminder")}
           description={t("weeklyDescription")}
           value={prefs.weeklyReminder.enabled}
           onChange={(v) => void enable(v)}
         />
         <Divider />
-        <SelectRow
-          label={t("reminderDay")}
-          value={t("weekday" + (prefs.weeklyReminder.weekday - 1))}
-          onPress={() =>
-            choice(
-              "reminderDay",
-              Array.from({ length: 7 }, (_, i) => [
-                String(i + 1),
-                "weekday" + i,
-              ]),
-              String(prefs.weeklyReminder.weekday),
-              (v) =>
-                change({
-                  weeklyReminder: {
-                    ...prefs.weeklyReminder,
-                    weekday: Number(v),
-                  },
-                }),
-            )
-          }
-        />
-        <DateControl
-          label={t("reminderTime")}
-          mode="time"
-          value={
-            String(prefs.weeklyReminder.hour).padStart(2, "0") +
-            ":" +
-            String(prefs.weeklyReminder.minute).padStart(2, "0")
-          }
-          onChange={(v) => {
-            if (/^\d{2}:\d{2}$/.test(v)) {
-              const [hour, minute] = v.split(":").map(Number);
-              if (hour < 24 && minute < 60)
-                change({
-                  weeklyReminder: { ...prefs.weeklyReminder, hour, minute },
-                });
-            }
-          }}
-        />
+        {prefs.weeklyReminder.enabled && (
+          <>
+            <SelectRow
+              label={t("reminderDay")}
+              value={t("weekday" + (prefs.weeklyReminder.weekday - 1))}
+              onPress={() =>
+                choice(
+                  "reminderDay",
+                  Array.from({ length: 7 }, (_, i) => [
+                    String(i + 1),
+                    "weekday" + i,
+                  ]),
+                  String(prefs.weeklyReminder.weekday),
+                  (v) =>
+                    change({
+                      weeklyReminder: {
+                        ...prefs.weeklyReminder,
+                        weekday: Number(v),
+                      },
+                    }),
+                )
+              }
+            />
+            <DateControl
+              label={t("reminderTime")}
+              mode="time"
+              value={
+                String(prefs.weeklyReminder.hour).padStart(2, "0") +
+                ":" +
+                String(prefs.weeklyReminder.minute).padStart(2, "0")
+              }
+              onChange={(v) => {
+                if (/^\d{2}:\d{2}$/.test(v)) {
+                  const [hour, minute] = v.split(":").map(Number);
+                  if (hour < 24 && minute < 60)
+                    change({
+                      weeklyReminder: { ...prefs.weeklyReminder, hour, minute },
+                    });
+                }
+              }}
+            />
+          </>
+        )}
         <Divider />
         <ToggleRow
           label={t("notificationSound")}

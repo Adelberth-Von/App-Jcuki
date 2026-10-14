@@ -72,3 +72,27 @@ export interface Match {
   end: number;
   users: string[];
 }
+
+export type ActivityKind =
+  | "member_joined"
+  | "schedule_updated"
+  | "event_created"
+  | "response_updated"
+  | "event_cancelled"
+  | "profile_updated";
+export interface Activity {
+  id: string;
+  groupId: string;
+  actorId: string;
+  actorName: string;
+  groupName: string;
+  kind: ActivityKind;
+  eventId?: string | null;
+  createdAt: string;
+}
+export interface PushDevice {
+  token: string;
+  language: Language;
+  sound: boolean;
+  zone: string;
+}

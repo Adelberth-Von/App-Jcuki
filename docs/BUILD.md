@@ -2,13 +2,13 @@
 
 ## GitHub Actions Android preview
 
-Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads only `JCuki-Android13-preview.apk` under the run's **Artifacts** section. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
+Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads `JCuki-Android13-preview.apk` as an artifact, then publishes a versioned **Android preview** release with the same asset. The stable [one-click APK link](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk) resolves after the first successful publication. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
 
 The automated APK is an **internal preview**. Expo SDK 57's generated release build uses its template debug signing key unless production signing is configured. CI verifies that configuration so a future template change cannot silently alter it. This key is intentionally unsuitable for Google Play production distribution. To publish, use your private production keystore or the EAS `production` profile with managed credentials.
 
-The job uses Ubuntu 24.04, Node 24, Java 17, Android SDK/build tools 36, the React Native 0.86 default NDK 27.1.12297006, and CMake 3.22.1. Configure repository variable `EXPO_PUBLIC_API_URL` with a deployed HTTPS JCuki backend if you want to embed a default endpoint; it is public application configuration. Users can also connect to the backend from the app. An APK built without an endpoint still supports the explicitly labelled local demonstration.
+The job uses Ubuntu 24.04, Node 24, Java 17, Android SDK/build tools 36, the React Native 0.86 default NDK 27.1.12297006, and CMake 3.22.1. Configure repository variable `EXPO_PUBLIC_API_URL` with a deployed HTTPS JCuki backend if you want to embed a default endpoint; it is public application configuration. For activity push, additionally set repository variable `EXPO_PUBLIC_EAS_PROJECT_ID` and secret `GOOGLE_SERVICES_JSON` containing the Firebase client config. Configure FCM v1 credentials in EAS; see [the complete notification setup](NOTIFICATIONS.md). Users can also connect to the backend from the app. An APK built without an endpoint still supports the explicitly labelled local demonstration.
 
-The workflow creates native projects from Expo configuration; generated `android/` and `ios/` projects are not maintained by hand. It uploads no keys, credentials, source maps, release publication, or backend deployment.
+The workflow creates native projects from Expo configuration; generated `android/` and `ios/` projects are not maintained by hand. It publishes only the preview APK and release metadata, never keys, credentials, source maps, or backend deployment. Only the publication job receives `contents: write`; it verifies that its commit is still the current main head before creating an immutable build tag and setting the latest release. Re-running an already published build does not overwrite its release asset.
 
 ## Optional iOS compile check
 
@@ -22,6 +22,7 @@ An Expo account is required for EAS Build. First authenticate and link the appli
 
 ```sh
 npx eas-cli@latest login
+npx eas-cli@latest init
 npx eas-cli@latest build:configure
 ```
 
@@ -41,7 +42,7 @@ npx eas-cli@latest build --platform ios --profile preview
 npx eas-cli@latest build --platform all --profile production
 ```
 
-EAS creates the project ID and manages signing through the authenticated account. Never put an Expo token, Apple credentials, or private keystore into the repository. These commands create builds; they do not submit anything to an app store.
+Supply the generated project UUID using `EXPO_PUBLIC_EAS_PROJECT_ID`; the dynamic app config preserves the notification/widget plugins. EAS manages signing through the authenticated account. For push, provide the Firebase client config through the EAS file variable `GOOGLE_SERVICES_FILE` or local `./google-services.json` during Android builds and set up FCM v1/APNs credentials as described in [NOTIFICATIONS.md](NOTIFICATIONS.md). Never put an Expo token, Apple credentials, or private keystore into the repository. These commands create builds; they do not submit anything to an app store.
 
 ## Native feature checks before release
 

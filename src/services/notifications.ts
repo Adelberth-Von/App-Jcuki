@@ -6,6 +6,8 @@ import {
   type AppLanguage,
   type AppPreferences,
 } from "./preferences";
+import type { Activity } from "../lib/types";
+import { translate } from "../i18n";
 import { planWeeklyDates } from "./notificationPlan";
 
 export const JCuki_NOTIFICATION_SOUND = "jcuki_chime.wav";
@@ -88,6 +90,21 @@ export async function initializeNotifications(
         contentType: Notifications.AndroidAudioContentType.SONIFICATION,
       },
     });
+    await Notifications.setNotificationChannelAsync("jcuki-activity-v2", {
+      name: language === "id" ? "Aktivitas teman" : "Friends’ activity",
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: JCuki_NOTIFICATION_SOUND,
+      vibrationPattern: [0, 70, 90, 70],
+    });
+    await Notifications.setNotificationChannelAsync(
+      "jcuki-activity-silent-v2",
+      {
+        name: language === "id" ? "Aktivitas senyap" : "Silent activity",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: null,
+        enableVibrate: false,
+      },
+    );
     await Notifications.setNotificationChannelAsync(JCuki_SILENT_CHANNEL, {
       name: language === "id" ? "Pengingat senyap" : "Silent reminders",
       importance: Notifications.AndroidImportance.HIGH,
@@ -312,5 +329,41 @@ export function cancelJCukiNotifications(): Promise<void> {
   return serialize(async () => {
     if (Platform.OS === "web") return;
     await cancelPrefix("jcuki-");
+  });
+}
+
+export async function notifyActivity(
+  activity: Activity,
+  input: AppPreferences,
+): Promise<void> {
+  if (
+    Platform.OS === "web" ||
+    !input.activityNotifications ||
+    !(await getNotificationPermission())
+  )
+    return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: "jcuki-activity-" + activity.id,
+    content: content(
+      input,
+      activity.groupName,
+      activity.actorName +
+        " " +
+        translate(input.language, "activity_" + activity.kind),
+      {
+        kind: "activity",
+        activityId: activity.id,
+        groupId: activity.groupId,
+        eventId: activity.eventId || "",
+      },
+    ),
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1,
+      repeats: false,
+      channelId: input.notificationSound
+        ? "jcuki-activity-v2"
+        : "jcuki-activity-silent-v2",
+    },
   });
 }

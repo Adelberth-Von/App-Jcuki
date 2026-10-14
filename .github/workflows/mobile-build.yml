@@ -25,6 +25,7 @@ env:
   EXPO_NO_TELEMETRY: "1"
   # Optional public API endpoint. This is configuration, never an authentication token.
   EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+  EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID }}
 
 jobs:
   checks:
@@ -67,7 +68,14 @@ jobs:
       - name: Install the Android build dependencies
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
       - name: Generate native Android project from Expo config
-        run: npx expo prebuild --platform android --no-install
+        # Optional Firebase client config for native push. Never print it in logs.
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+          fi
+          npx expo prebuild --platform android --no-install
       - name: Verify preview signing configuration
         run: |
           node <<'NODE'
@@ -102,6 +110,49 @@ jobs:
       - name: Build result
         run: |
           printf '%s\n' '### JCuki Android preview' 'Download the APK from this run’s Artifacts section and install it on Android 13 or later.' 'This standalone preview uses the Expo template debug signing key and includes its JavaScript bundle. Metro is not required.' 'Use a private production signing key or EAS production profile before publishing to Google Play.' >> "$GITHUB_STEP_SUMMARY"
+
+  publish-preview:
+    name: Publish direct APK download
+    if: github.ref == 'refs/heads/main'
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: jcuki-preview-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: JCuki-Android13-preview
+          path: artifacts
+      - name: Publish the current main build as a preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$current" != "$GITHUB_SHA" ]; then
+            printf '%s\n' 'A newer main commit exists; keeping its download as the next release.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat > /tmp/jcuki-release-notes.md <<'NOTES'
+          Android 13+ standalone preview of JCuki 1.2.0, with the JavaScript bundle included.
+
+          Warm Light/Dark/System design, animated welcome, gallery profile, weekly calendar, atomic day-off/hour editor, paginated plans and activity, Indonesian/English, and timezone-aware reminders.
+
+          Install the attached APK directly; Expo Go and Metro are not needed. This preview uses the Expo template debug signing key. Use EAS/private production signing before store distribution. Real shared schedules need a deployed backend. Background activity push additionally needs the EAS/Firebase/APNs setup described in docs/NOTIFICATIONS.md. Physical iPhone builds require Apple signing and are separate from this APK.
+          NOTES
+          tag="v1.2.0-preview-${GITHUB_RUN_NUMBER}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            printf '%s\n' 'This immutable preview release already exists.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh release create "$tag" artifacts/JCuki-Android13-preview.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "JCuki 1.2.0 — Android preview ${GITHUB_RUN_NUMBER}" \
+            --notes-file /tmp/jcuki-release-notes.md --latest
+          printf '%s\n' "Direct APK: https://github.com/$GITHUB_REPOSITORY/releases/latest/download/JCuki-Android13-preview.apk" >> "$GITHUB_STEP_SUMMARY"
 
   ios-simulator:
     name: Optional iOS simulator compilation

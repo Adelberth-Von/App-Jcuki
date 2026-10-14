@@ -48,3 +48,6 @@ backend/.wrangler/
 # generated native folders
 /ios
 /android
+
+# Firebase native client config is injected by GitHub/EAS, not committed.
+google-services.json

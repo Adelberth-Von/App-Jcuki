@@ -62,7 +62,9 @@ export default function Groups() {
         p.items.map((g) => (
           <Press
             key={g.id}
-            label={g.name}
+            label={g.name + (g.id === group?.id ? ", " + t("activeGroup") : "")}
+            selected={g.id === group?.id}
+            disabled={busy}
             onPress={() => {
               void switchGroup(g.id)
                 .then(() => router.push("/(tabs)"))
@@ -73,6 +75,8 @@ export default function Groups() {
             <Card
               style={{
                 borderColor: g.id === group?.id ? colors.accent : colors.line,
+                backgroundColor:
+                  g.id === group?.id ? colors.accentSoft : colors.surface,
               }}
             >
               <Row between>
@@ -89,13 +93,19 @@ export default function Groups() {
                   <Icon name="people-outline" color={colors.accent} size={27} />
                 </View>
                 <Pill
-                  label={demoMode ? t("demoBadge") : t("cloud")}
+                  label={
+                    demoMode
+                      ? t("demoBadge")
+                      : g.id === group?.id
+                        ? t("activeGroup")
+                        : t("cloud")
+                  }
                   tone={demoMode ? "peach" : "green"}
                 />
               </Row>
               <Txt
-                size={21}
-                weight="bold"
+                size={24}
+                weight="semibold"
                 heading
                 style={{ marginTop: 20, letterSpacing: -0.5 }}
               >
@@ -105,7 +115,7 @@ export default function Groups() {
                 {g.memberCount} {t("members")}
               </Txt>
               <Row between style={{ marginTop: 20 }}>
-                <Row style={{ gap: 6 }}>
+                <Row style={{ gap: 4, flex: 1 }}>
                   {g.id === group?.id ? (
                     group.members
                       .slice(0, 4)
@@ -116,7 +126,18 @@ export default function Groups() {
                     </Txt>
                   )}
                 </Row>
-                <Icon name="arrow-forward" color={colors.accent} />
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <Icon name="arrow-forward" color={colors.accent} />
+                </View>
               </Row>
             </Card>
           </Press>
@@ -127,13 +148,17 @@ export default function Groups() {
             title={t("noGroups")}
             description={t("noGroupsDescription")}
             icon="people-outline"
+            action={{
+              title: t("joinGroup"),
+              onPress: () => setOverlay({ kind: "joinGroup" }),
+            }}
           />
         </Card>
       )}
       <Pager page={p.page} pages={p.pages} onPage={setPage} />
       {moreGroups && (
         <Button
-          title={t("next")}
+          title={t("loadMore")}
           kind="secondary"
           onPress={() => void loadMoreGroups().catch(() => {})}
           disabled={busy}

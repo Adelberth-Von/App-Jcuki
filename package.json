@@ -1,6 +1,6 @@
 {
   "name": "jcuki",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -51,7 +51,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src plugins",
+    "lint": "eslint src plugins app.config.js",
     "test": "node --test tests/*.test.mjs"
   },
   "private": true,

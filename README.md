@@ -1,66 +1,131 @@
-# JCuki
+<p align="center"><img src="assets/brand-mark.png" alt="Logo Jcuki: tiga teman mengelilingi jam" width="116" /></p>
+
+# Jcuki · waktu untuk bersama
+
+Aplikasi penjadwalan untuk teman dengan shift kerja dan zona waktu berbeda. Tandai libur, isi jam bermain, lalu sepakati rencana. Komunikasi tetap lewat aplikasi pilihan kalian.
+
+**Android 13+ · iPhone iOS 16.4+ · Bahasa Indonesia / English · Light / Dark / System**
 
 **Develop by Terrence**
 
-A native React Native / Expo app for friends with unpredictable shifts and different time zones. Android **13+ (API 33)** and iPhone **iOS 16.4+**. This repository contains native screens and native services, not the earlier PWA.
+## Download
 
-## Screen preview
+[**⬇ Download APK Android 13+ — sekali klik**](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk)
+
+[Tampilan dan kode sumber](https://github.com/Adelberth-Von/App-Jcuki) · [Release](https://github.com/Adelberth-Von/App-Jcuki/releases) · [Status build](https://github.com/Adelberth-Von/App-Jcuki/actions/workflows/mobile-build.yml)
+
+APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasil. Link di atas langsung mengunduh file APK, tanpa ZIP atau membuka halaman Actions. Release diberi nama **Android preview**, memakai template debug signing key Expo untuk pengujian. APK menyertakan bundle JavaScript, sehingga tidak membutuhkan Metro/Expo Go. Untuk distribusi Play Store gunakan signing privat/EAS production. Jika belum ada release berhasil, lihat status build; jangan memasang APK lama dengan menganggapnya versi baru.
+
+Untuk memasang: buka APK di Android 13 atau lebih baru, izinkan pemasangan dari sumber browser/file manager jika diminta OS, lalu buka Jcuki. iPhone memerlukan build terpisah melalui EAS dan Apple signing; APK tidak dapat dipasang di iPhone. Lihat [panduan build](docs/BUILD.md).
+
+## Apa yang diperbaiki
+
+- **Identitas baru:** tiga teman mengelilingi jam, loading dengan gerak napas lembut dan transisi masuk. Tidak ada waktu tunggu buatan; animasi mengikuti Reduce Motion.
+- **Kenalan dua langkah:** sambutan, panggilan, foto dari galeri, lalu buat/gabung lingkaran. Foto opsional; profil awal dapat disimpan sebelum menghubungkan backend. Mode contoh dapat dicoba langsung.
+- **Desain hangat:** krem, hijau lumut, kontras yang nyaman, hierarki teks jelas, kartu lebih lega, tombol utama mudah dijangkau. Light, Dark, atau System dengan preview tampilan.
+- **Kalender mingguan sebagai awal:** tampilan bulanan tetap tersedia. Satu editor untuk konfirmasi libur dan jam opsional, pilihan cepat Sore/Malam/Larut malam, lintas tengah malam, ringkasan durasi, dan beberapa rentang per hari.
+- **Waktu tiap pengguna:** zona IANA otomatis dari OS atau dipilih manual. Jam sesi dikonversi ke zona pembaca; DST Berlin dan offset setengah jam ditangani. Tidak memakai GPS.
+- **Kabar lingkaran:** ikon lonceng, riwayat aktivitas, status belum dibaca, filter jadwal/rencana, dan pagination. Push aktivitas untuk anggota lain disiapkan di backend dengan opt-out, antrean, retry dan receipt.
+- **Pengingat:** mingguan sesuai hari/jam roster serta rencana yang diterima; suara original Jcuki Chime empat nada. Izin OS hanya diminta sesudah tindakan pengguna.
+- **Aksesibilitas:** target tekan minimum 48×48, label kontrol, fokus input, dukungan pembesaran teks, dan animasi yang mengikuti Reduce Motion.
+
+Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari belum diisi berarti **belum dikonfirmasi**, bukan otomatis sibuk.
+
+## Panduan pemakaian
+
+1. Masukkan panggilan; pilih foto dari galeri jika ingin. Foto yang dipilih dipotong persegi dan dikompres; aplikasi tidak membaca seluruh galeri.
+2. Pilih **Lanjut**. Untuk mencoba tanpa server pilih **Jelajahi contoh**; data contoh diberi label dan tidak terhubung ke teman nyata.
+3. Untuk lingkaran nyata, gunakan backend HTTPS yang sama pada setiap perangkat. Jika belum terpasang pada APK, buka **Pengaturan → Koneksi grup** atau tombol koneksi saat onboarding. [Deploy backend](backend/README.md) dahulu.
+4. Buat grup, bagikan kode undangan kepada teman, lalu teman memilih **Gabung grup** pada perangkat mereka. Mendukung tiga pengguna atau lebih dan beberapa lingkaran.
+5. Saat roster keluar, buka **Kalender**, pilih tanggal, lalu konfirmasi libur. Nyalakan **Isi jam bermain sekarang** jika jamnya diketahui, isi mulai/selesai, dan simpan sekali. Memilih tanggal saja tidak menyimpan apa pun.
+6. Tambahkan rentang lain bila perlu. Menghapus jam tetap mempertahankan libur; membatalkan libur menghapus jam yang terkait. Rentang bentrok dan waktu invalid ditolak.
+7. Buka **Agenda → Buat rencana**, pilih tanggal/jam, lalu teman menjawab Bisa/Mungkin/Tidak bisa. Detail rencana menampilkan jawaban anggota dan ekspor kalender ICS. Percakapan dapat diteruskan melalui aplikasi lain.
+8. Di **Pengaturan**, pilih bahasa, tema, format jam dan zona waktu. Aktifkan pengingat mingguan pada hari/jam yang cocok. Nyalakan notifikasi aktivitas sesudah integrasi push dikonfigurasi.
+9. Ketuk ikon lonceng untuk membaca kabar. Halaman agenda, kabar, grup, teman, dan libur memiliki pagination; **Muat lebih banyak** meminta halaman server berikutnya.
+
+## Tampilan setiap layar
+
+Screenshot berikut berasal dari layar React Native yang dirender di browser untuk pemeriksaan layout, memakai data contoh. Picker OS, suara, keyboard, widget, dan push background harus diuji di aplikasi native.
 
 <p>
-  <img src="docs/preview/dashboard-light.png" alt="JCuki dashboard in light mode" width="196" />
-  <img src="docs/preview/dashboard-dark.png" alt="JCuki dashboard in dark mode" width="196" />
+<img src="docs/preview/loading-light.png" alt="Loading dengan logo baru" width="190" />
+<img src="docs/preview/welcome-light.png" alt="Sambutan dan profil awal" width="190" />
+<img src="docs/preview/welcome-circle.png" alt="Langkah memilih lingkaran" width="190" />
 </p>
 <p>
-  <img src="docs/preview/calendar.png" alt="Monthly confirmed days off" width="196" />
-  <img src="docs/preview/confirm-day.png" alt="Explicit day-off confirmation" width="196" />
-  <img src="docs/preview/playing-hours.png" alt="Optional playing hours" width="196" />
+<img src="docs/preview/dashboard-light.png" alt="Beranda Light" width="190" />
+<img src="docs/preview/dashboard-dark.png" alt="Beranda Dark" width="190" />
+<img src="docs/preview/calendar-week.png" alt="Kalender mingguan" width="190" />
+<img src="docs/preview/calendar.png" alt="Kalender bulanan" width="190" />
+</p>
+<p>
+<img src="docs/preview/confirm-day.png" alt="Editor konfirmasi libur" width="190" />
+<img src="docs/preview/playing-hours.png" alt="Editor jam bermain opsional" width="190" />
+<img src="docs/preview/groups-light.png" alt="Daftar lingkaran" width="190" />
+<img src="docs/preview/activity-light.png" alt="Kabar dan pagination" width="190" />
+</p>
+<p>
+<img src="docs/preview/agenda-light.png" alt="Agenda lengkap" width="190" />
+<img src="docs/preview/create-plan.png" alt="Buat rencana" width="190" />
+<img src="docs/preview/plan-detail.png" alt="Detail dan jawaban rencana" width="190" />
+</p>
+<p>
+<img src="docs/preview/settings-light.png" alt="Pengaturan Light" width="190" />
+<img src="docs/preview/settings-dark.png" alt="Pengaturan Dark" width="190" />
+<img src="docs/preview/settings-notifications.png" alt="Pengaturan pengingat dan aktivitas" width="190" />
 </p>
 
-These images show the React Native screens rendered in a browser for layout review. Install the APK to try the native Android experience.
+| Layar / dialog            | Preview                                                                                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loading                   | [Light](docs/preview/loading-light.png)                                                                                                                                                                                   |
+| Sambutan, panggilan, foto | [Profil awal](docs/preview/welcome-light.png), [pilih lingkaran](docs/preview/welcome-circle.png), [ubah profil](docs/preview/profile-edit.png)                                                                           |
+| Beranda                   | [Light](docs/preview/dashboard-light.png), [Dark](docs/preview/dashboard-dark.png), [English](docs/preview/dashboard-english.png), [320 px](docs/preview/dashboard-small.png), [430 px](docs/preview/dashboard-large.png) |
+| Kalender                  | [Mingguan](docs/preview/calendar-week.png), [Bulanan](docs/preview/calendar.png), [320 px](docs/preview/calendar-small.png)                                                                                               |
+| Editor jadwal             | [Konfirmasi libur](docs/preview/confirm-day.png), [Jam bermain](docs/preview/playing-hours.png)                                                                                                                           |
+| Lingkaran                 | [Daftar grup](docs/preview/groups-light.png), [Buat](docs/preview/create-group.png), [Gabung](docs/preview/join-group.png), [Undangan](docs/preview/invite.png)                                                           |
+| Agenda                    | [Daftar](docs/preview/agenda-light.png), [Buat rencana](docs/preview/create-plan.png), [Detail rencana](docs/preview/plan-detail.png)                                                                                     |
+| Aktivitas                 | [Light](docs/preview/activity-light.png), [Dark](docs/preview/activity-dark.png), [English](docs/preview/activity-english.png)                                                                                            |
+| Pengaturan                | [Light](docs/preview/settings-light.png), [Dark](docs/preview/settings-dark.png), [Notifikasi](docs/preview/settings-notifications.png)                                                                                   |
 
-## Included
+## Pagination: sudah ada
 
-- Welcome/profile editor with nickname and system-gallery photo selection.
-- A focused dashboard and monthly calendar: tap a date, explicitly confirm your day off, then optionally add start/end playing hours. Merely selecting a date never confirms it. No automatic shared-time suggestions.
-- Indonesian/English, light/dark/system appearance, automatic or chosen IANA time zone, 24-hour/AM/PM. Berlin daylight-saving transitions are handled explicitly.
-- Pagination: four cards per page in the UI; cursor pagination in the shared API, including previous plans.
-- Weekly local reminders and accepted-plan reminders with the original **JCuki Chime**. Permission is requested after a user action. Android channels and bundled iOS sound are configured.
-- Android home-screen widget and iOS WidgetKit extension showing the next confirmed day off, gallery image cropping/compression, and an uninstall entry leading to the operating system's removal flow.
-- Minimum 48×48 touch targets, 20px page padding, bottom primary actions, instant press feedback, accessible labels, text scaling, reduced-motion loading skeletons and a solid forest-green accent.
-- Cloudflare Worker + D1 shared backend in `backend/`, including real membership checks, private photos, rate limiting and server pagination.
+Daftar UI menampilkan **empat item per halaman** dengan Sebelumnya/Berikutnya dan nomor halaman; halaman dikoreksi setelah filter berubah. API menggunakan **cursor/keyset pagination** untuk grup, rencana mendatang/riwayat, dan aktivitas: default 20, batas 1–50, cursor terikat ke identitas/grup/view. Kalender memakai navigasi minggu/bulan. Pagination UI tidak menggantikan pemuatan server; tombol **Muat lebih banyak** melanjutkan cursor tanpa menduplikasi item. Tes mencakup pergantian halaman dan penolakan cursor lintas grup.
 
-## Run
+## Menjalankan dan menghubungkan teman
+
+Gunakan Node.js 24+ dan npm:
 
 ```sh
 npm ci
+cp .env.example .env
 npm run typecheck
 npm run lint
 npm test
 npm start
 ```
 
-Scan the Expo QR code for a quick screen preview. A standalone native build is needed for the custom notification sound and home-screen widgets. `npm run android` requires an Android SDK; `npm run ios` requires macOS and Xcode 26.4+.
+`npm run web` untuk review layout. `npm run android` membutuhkan Android SDK; `npm run ios` membutuhkan macOS dan Xcode 26.4+. Widget, suara kustom, gallery OS, dan remote push membutuhkan native build; browser/Expo Go tidak membuktikan fitur tersebut.
 
-For browser layout review, `npm run web` runs the same React Native screens. Browser preview cannot verify native widgets or OS notification sound.
+Backend memakai Cloudflare Worker + D1. Terapkan **semua migration 0001–0003** sebelum deploy. Set `EXPO_PUBLIC_API_URL` ke Worker HTTPS, lalu restart Expo atau rebuild APK. Backend memeriksa anggota grup, membatasi upload foto, dan menyimpan perubahan secara atomik. [Panduan backend dan API](backend/README.md).
 
-## APK / iPhone
+Setiap instalasi memakai identitas perangkat privat. Belum ada login atau pemulihan akun lintas perangkat; menghapus data/reinstall dapat menghilangkan akses keanggotaan. Jangan menganggap nickname sebagai akun yang bisa dipulihkan.
 
-Push to `main` starts GitHub Actions and builds a standalone Android preview APK. Open **Actions → JCuki mobile build → successful run → Artifacts → JCuki-Android13-preview**, unzip and install the APK on Android 13+. This preview uses the Expo template debug signing key; it is for testing. Production Play Store publishing needs a private release key. See [build instructions](docs/BUILD.md).
+## Notifikasi dan zona waktu
 
-The optional manual workflow can compile an unsigned iOS Simulator app. A physical iPhone build needs an Apple Developer account, device provisioning and EAS/Xcode signing; Android APKs cannot be installed on iPhone. `eas.json` includes preview, simulator and production profiles.
+**Integrasi tersedia; kredensial proyek belum disertakan.** Ikuti [panduan Expo/EAS, Firebase/FCM v1 dan APNs](docs/NOTIFICATIONS.md) untuk push saat aplikasi tertutup. Status di Pengaturan membedakan izin, setup proyek, server belum aktif, siap, dan kesalahan. Aktivitas mencakup anggota baru, perubahan jadwal, rencana/jawaban/pembatalan dan profil. Pengirim dikecualikan; preferensi bahasa/suara penerima digunakan. Tanpa push siap, polling saat aplikasi terbuka merupakan fallback.
 
-## Shared schedules
+Pengingat mingguan merupakan jadwal lokal OS dan tetap terpisah dari push. Default belum aktif, Minggu 19.00; hari/jam dapat diubah. Zona otomatis mengikuti zona waktu OS saat kembali aktif; zona manual memakai IANA. Android menjadwalkan pengingat zona manual 12 minggu ke depan dan memperbaruinya saat aplikasi dibuka. Rencana lokal memakai data terakhir disinkronkan; buka aplikasi setelah perubahan teman untuk memperbarui pengingat. Sistem Focus/DND/izin OS dapat memengaruhi pengiriman dan suara.
 
-Days off are explicit local calendar dates stored with the IANA zone used when confirmed. Playing hours are optional UTC intervals. Removing hours leaves the day confirmed; cancelling the day removes its associated hours. Existing availability is never automatically converted into a confirmed day off. If updating an existing backend, apply migration `0002_confirmed_days_off.sql` before deploying the worker.
+[Dengarkan **Jcuki Chime**](assets/sounds/jcuki_chime.wav) · motif original C5–E5–G5–C6, 1,78 detik. Script pembuat: `node scripts/generate-notification-sound.mjs`.
 
-Without a configured server, **Explore a demo** uses clearly labelled sample members on this device. It does not connect real friends. Deploy `backend/` following [backend instructions](backend/README.md), then set `EXPO_PUBLIC_API_URL` (or the GitHub repository variable of the same name) before building. The preview also accepts the HTTPS address in Settings → Group connection.
+Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pengaturan widget membuka alur OS. Entry uninstall Android mengarah ke konfirmasi penghapusan sistem.
 
-Create a group, share its code, and have friends enter it from their own installed app. Each device has a private random identity. This first version does not provide account recovery across devices or server-push updates; schedules refresh on foreground/pull-to-refresh. Local reminders reflect the plans last synchronized, including previously viewed groups. Reinstalling/resetting device storage can lose membership access. Add recoverable account sign-in before wider distribution.
+## Validasi
 
-Explicit-zone Android weekly reminders are scheduled 12 weeks ahead and refreshed when the app is opened. Device-zone reminders repeat weekly. Remote changes made while the app is closed require a refresh to update local reminders. Notification delivery depends on operating-system settings.
+TypeScript, ESLint dan tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, identitas perangkat, penyimpanan, terjemahan, serta properti WAV. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature sebelum publikasi. Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
-## Validation and remaining device checks
+Pengiriman push FCM/APNs, suara native, keyboard/gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
 
-Behavior tests cover three independent users, private group access, photo limits, pagination, timezone/DST conversion, overlap matching, device identity, persistence ordering, translation completeness and sound-file properties. Expo compatibility, TypeScript, ESLint and production JavaScript bundling are checked before push. Native gallery permissions, chime playback, widget installation and real-device accessibility still need Android/iPhone device QA.
+## English quick start
 
-The Expo 57 dependency tree retains development-tool audit findings; the malformed-URI decoder used by routing is pinned to its patched 0.5.0 version. Do not force an unsupported Expo major upgrade using `npm audit fix --force`.
+Jcuki helps a private circle share days off and optional playing hours across time zones. Download the Android 13+ preview above, enter a nickname/photo, and create or join a circle using the same deployed backend. Tap a calendar date, explicitly confirm your day off, optionally enter hours, then make a plan and collect friends' responses. Choose English and Light/Dark/System in Settings. Sample mode runs locally and does not connect real friends. Background activity push needs the project credentials described in [the notification guide](docs/NOTIFICATIONS.md); iPhone distribution requires Apple signing.

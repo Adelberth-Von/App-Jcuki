@@ -32,9 +32,11 @@ import type {
   Group,
   GroupSummary,
   Profile,
+  Activity,
 } from "./lib/types";
 import {
   getDefaultPreferences,
+  getDeviceTimeZone,
   getEffectiveTimeZone,
   loadPreferences,
   savePreferences,
@@ -53,6 +55,8 @@ import {
   syncEventReminders,
   type ReminderEvent,
 } from "./services/notifications";
+import { useActivity } from "./hooks/useActivity";
+import type { PushStatus } from "./services/push";
 import { lightColors, darkColors, type Colors } from "./theme";
 import { translate } from "./i18n";
 export type Overlay =
@@ -103,7 +107,7 @@ interface AppContextValue {
   date: (instant: string | number, opts?: Intl.DateTimeFormatOptions) => string;
   updatePrefs: (v: Partial<AppPreferences>) => Promise<void>;
   saveProfile: (nickname: string) => Promise<void>;
-  enterDemo: () => Promise<void>;
+  enterDemo: (nickname?: string) => Promise<void>;
   choosePhoto: () => Promise<void>;
   deletePhoto: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -113,6 +117,20 @@ interface AppContextValue {
   saveAvailability: (slot: Availability, replaceId?: string) => Promise<void>;
   deleteAvailability: (id: string) => Promise<void>;
   confirmDayOff: (day: string) => Promise<void>;
+  saveDaySchedule: (
+    day: string,
+    slot?: Availability,
+    replaceId?: string,
+  ) => Promise<void>;
+  activities: Activity[];
+  activityUnread: number;
+  activityMore: boolean;
+  activityLoading: boolean;
+  activityError: boolean;
+  loadMoreActivity: () => Promise<void>;
+  refreshActivity: () => Promise<void>;
+  markActivityRead: () => void;
+  pushStatus: PushStatus;
   removeDayOff: (day: string) => Promise<void>;
   createEvent: (input: EventInput) => Promise<void>;
   respond: (id: string, status: AvailabilityStatus) => Promise<void>;
@@ -207,6 +225,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [groupsCursor, setGroupsCursor] = useState<string | null>(null),
     [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [reminderEvents, setReminderEvents] = useState<ReminderEvent[]>([]);
+  const [deviceZone, setDeviceZone] = useState(getDeviceTimeZone);
   const scheme = useColorScheme(),
     timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gate = useRef(createOperationGate()),
@@ -215,7 +234,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       null,
     );
   const persistence = useRef<Promise<void>>(Promise.resolve());
-  const zone = getEffectiveTimeZone(prefs),
+  const zone =
+      prefs.timeZone === "auto" ? deviceZone : getEffectiveTimeZone(prefs),
     dark =
       prefs.theme === "dark" || (prefs.theme === "system" && scheme === "dark"),
     colors = dark ? darkColors : lightColors;
@@ -257,60 +277,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       formatDate(instant, zone, prefs.language, options),
     [zone, prefs.language],
   );
-  function reportError(error: unknown) {
-    const code = error instanceof Error ? error.message : "SERVER_ERROR";
-    if (code === "BUSY") return;
-    setOffline(error instanceof APIError && error.status === 0);
-    if (code === "RATE_LIMITED")
-      notify(
-        prefs.language === "id"
-          ? "Terlalu banyak permintaan. Coba lagi dalam satu menit."
-          : "Too many requests. Try again in a minute.",
-        true,
-      );
-    else if (code === "EVENT_CLOSED")
-      notify(
-        prefs.language === "id"
-          ? "Rencana sudah ditutup. Perbarui jadwal untuk melihat status terbaru."
-          : "This plan is closed. Refresh to see its latest status.",
-        true,
-      );
-    else notify(errors[code] || "error");
-  }
-  function requireApi(): APIClient {
+  const reportError = useCallback(
+    (error: unknown) => {
+      const code = error instanceof Error ? error.message : "SERVER_ERROR";
+      if (code === "BUSY") return;
+      setOffline(error instanceof APIError && error.status === 0);
+      if (code === "RATE_LIMITED")
+        notify(
+          prefs.language === "id"
+            ? "Terlalu banyak permintaan. Coba lagi dalam satu menit."
+            : "Too many requests. Try again in a minute.",
+          true,
+        );
+      else if (code === "EVENT_CLOSED")
+        notify(
+          prefs.language === "id"
+            ? "Rencana sudah ditutup. Perbarui jadwal untuk melihat status terbaru."
+            : "This plan is closed. Refresh to see its latest status.",
+          true,
+        );
+      else notify(errors[code] || "error");
+    },
+    [notify, prefs.language],
+  );
+  const requireApi = useCallback((): APIClient => {
     if (!api) {
       setOverlay({ kind: "connection" });
       throw new Error("API_NOT_CONNECTED");
     }
     return api;
-  }
-  async function run<T>(job: () => Promise<T>): Promise<T> {
-    const ticket = gate.current.startMutation();
-    if (ticket === null) throw new Error("BUSY");
-    setBusy(true);
-    setRefreshing(false);
-    try {
-      const result = await job();
-      if (mounted.current) setOffline(false);
-      return result;
-    } catch (error) {
-      if (mounted.current) reportError(error);
-      throw error;
-    } finally {
-      gate.current.finishMutation();
-      if (mounted.current) setBusy(false);
-    }
-  }
-  function applyOwnProfile(next: Profile) {
-    const previousId = profile.id;
-    setProfile(next);
-    setDemoGroups((list) =>
-      list.map((item) => reconcileOwnProfile(item, previousId, next)),
-    );
-    setGroup((current) =>
-      current ? reconcileOwnProfile(current, previousId, next) : null,
-    );
-  }
+  }, [api]);
+  const run = useCallback(
+    async <T,>(job: () => Promise<T>): Promise<T> => {
+      const ticket = gate.current.startMutation();
+      if (ticket === null) throw new Error("BUSY");
+      setBusy(true);
+      setRefreshing(false);
+      try {
+        const result = await job();
+        if (mounted.current) setOffline(false);
+        return result;
+      } catch (error) {
+        if (mounted.current) reportError(error);
+        throw error;
+      } finally {
+        gate.current.finishMutation();
+        if (mounted.current) setBusy(false);
+      }
+    },
+    [reportError],
+  );
+  const applyOwnProfile = useCallback(
+    (next: Profile) => {
+      const previousId = profile.id;
+      setProfile(next);
+      setDemoGroups((list) =>
+        list.map((item) => reconcileOwnProfile(item, previousId, next)),
+      );
+      setGroup((current) =>
+        current ? reconcileOwnProfile(current, previousId, next) : null,
+      );
+    },
+    [profile.id],
+  );
   const replaceGroup = useCallback(
     (next: Group) => {
       setGroup(next);
@@ -331,6 +360,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     mounted.current = true;
+    const initialGate = gate.current;
     let active = true;
     (async () => {
       const [preferences, id, photo, raw, token] = await Promise.all([
@@ -412,13 +442,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })().catch((error) => {
       if (active) {
         setReady(true);
-        reportError(error);
+        setOffline(error instanceof APIError && error.status === 0);
+        setMessage(translate(getDefaultPreferences().language, "error"));
       }
     });
     return () => {
       active = false;
       mounted.current = false;
-      gate.current.invalidate();
+      initialGate.invalidate();
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
@@ -485,7 +516,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void syncEventReminders(reminderEvents, prefs).catch(() => {});
   }, [ready, prefs, reminderEvents]);
 
-  async function refresh(): Promise<void> {
+  const currentWorkspace = useRef({
+    demoMode,
+    api,
+    group,
+    profileId: profile.id,
+    pendingPhotoUri,
+  });
+  useEffect(() => {
+    currentWorkspace.current = {
+      demoMode,
+      api,
+      group,
+      profileId: profile.id,
+      pendingPhotoUri,
+    };
+  }, [demoMode, api, group, profile.id, pendingPhotoUri]);
+  const refresh = useCallback(async (): Promise<void> => {
+    const { demoMode, api, group, profileId, pendingPhotoUri } =
+      currentWorkspace.current;
     if (demoMode || gate.current.busy) return;
     if (!api) {
       reportError(new Error("API_NOT_CONNECTED"));
@@ -532,9 +581,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setGroups(page.items);
         setGroupsCursor(page.nextCursor);
         setGroup(
-          selected
-            ? reconcileOwnProfile(selected, profile.id, canonical)
-            : null,
+          selected ? reconcileOwnProfile(selected, profileId, canonical) : null,
         );
         setOffline(false);
       } catch (error) {
@@ -547,22 +594,84 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
     refreshingTask.current = { ticket, promise: task };
     return task;
-  }
+  }, [reportError, applyOwnProfile]);
   useEffect(() => {
     if (ready && onboarded && !demoMode)
       void Promise.resolve()
         .then(refresh)
         .catch(() => {});
-  }, [ready, onboarded, demoMode, api]);
+  }, [ready, onboarded, demoMode, api, refresh]);
   useEffect(() => {
     if (!ready) return;
     const subscription = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
+      setDeviceZone(getDeviceTimeZone());
       void setWeeklyReminder(prefs).catch(() => {});
       if (!demoMode) void refresh().catch(() => {});
     });
     return () => subscription.remove();
-  }, [ready, prefs, demoMode, api, group?.id]);
+  }, [ready, prefs, demoMode, refresh]);
+
+  const activityState = useActivity({
+    api: ready && onboarded ? api : null,
+    group,
+    profileId: profile.id,
+    demoMode,
+    prefs,
+    zone,
+    onChange: refresh,
+  });
+  useEffect(() => {
+    if (
+      !ready ||
+      !onboarded ||
+      prefs.timeZone !== "auto" ||
+      profile.zone === zone ||
+      !profile.nickname
+    )
+      return;
+    let live = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    async function syncZone() {
+      if (!live) return;
+      if (gate.current.busy) {
+        retry = setTimeout(() => void syncZone(), 500);
+        return;
+      }
+      try {
+        await run(async () => {
+          const next = demoMode
+            ? { ...profile, zone }
+            : await requireApi().upsertProfile({
+                nickname: profile.nickname,
+                zone,
+              });
+          if (live)
+            applyOwnProfile({
+              ...next,
+              ...(pendingPhotoUri ? { avatarUri: pendingPhotoUri } : {}),
+            });
+        });
+      } catch {}
+    }
+    void Promise.resolve().then(syncZone);
+    return () => {
+      live = false;
+      if (retry) clearTimeout(retry);
+    };
+  }, [
+    ready,
+    onboarded,
+    prefs.timeZone,
+    profile,
+    applyOwnProfile,
+    requireApi,
+    run,
+    pendingPhotoUri,
+    zone,
+    demoMode,
+    api,
+  ]);
 
   async function updatePrefs(patch: Partial<AppPreferences>) {
     await run(async () => {
@@ -595,21 +704,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error("invalidNickname");
     }
     await run(async () => {
-      const next = demoMode
-        ? { ...profile, nickname, zone }
-        : await requireApi().upsertProfile({ nickname, zone });
+      const client = demoMode || !api ? null : requireApi();
+      let next = client
+        ? await client.upsertProfile({ nickname, zone })
+        : { ...profile, nickname, zone };
+      if (client && pendingPhotoUri) {
+        try {
+          next = {
+            ...(await client.uploadAvatar(
+              await getProfilePhotoUpload(pendingPhotoUri),
+            )),
+            avatarUri: pendingPhotoUri,
+          };
+          setPendingPhotoUri(null);
+        } catch {
+          notify("photoUnsynced");
+        }
+      }
       applyOwnProfile(
         pendingPhotoUri ? { ...next, avatarUri: pendingPhotoUri } : next,
       );
       setOnboarded(true);
     });
   }
-  async function commitDemo() {
+  async function commitDemo(nickname?: string) {
     setReminderEvents([]);
     const localPhoto = await getProfilePhoto(),
       next = {
         ...profile,
-        nickname: profile.nickname || "Terrence",
+        nickname: nickname?.trim() || profile.nickname || "Terrence",
         zone,
         avatarUri: localPhoto || undefined,
       };
@@ -625,21 +748,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setGroupsCursor(null);
     setOffline(false);
   }
-  async function enterDemo() {
-    await run(commitDemo);
+  async function enterDemo(nickname?: string) {
+    await run(() => commitDemo(nickname));
   }
   async function choosePhoto() {
     let selected = false;
     try {
       await run(async () => {
-        const client = demoMode ? null : requireApi();
+        const client = demoMode || !onboarded ? null : requireApi();
         const uri = await pickProfilePhoto();
         if (!uri) return;
         selected = true;
         // The picker replaces the old file. Immediately keep the new valid URI even if cloud upload fails.
         const local = { ...profile, avatarUri: uri };
         applyOwnProfile(local);
-        setPendingPhotoUri(client ? uri : null);
+        setPendingPhotoUri(!demoMode ? uri : null);
         if (client) {
           const remote = await client.uploadAvatar(
             await getProfilePhotoUpload(uri),
@@ -719,6 +842,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGroup(selected);
       setOverlay(null);
       notify("groupJoined");
+    });
+  }
+  async function saveDaySchedule(
+    day: string,
+    slot?: Availability,
+    replaceId?: string,
+  ) {
+    if (!group) throw new Error("CLOUD_REQUIRED");
+    await run(async () => {
+      const own = group.members.find((member) => member.id === profile.id);
+      if (!own) throw new Error("NO_PERMISSION");
+      const existing = own.daysOff?.find((item) => item.date === day);
+      const confirmed = existing || confirmLocalDay(day, zone);
+      if (slot) {
+        if (
+          localDate(slot.start, confirmed.zone) !== day ||
+          Date.parse(slot.end) <= Date.parse(slot.start) ||
+          Date.parse(slot.end) - Date.parse(slot.start) > 86400000
+        )
+          throw new Error("invalidRange");
+        if (!replaceId && Date.parse(slot.start) < Date.now())
+          throw new Error("pastTime");
+        if (
+          own.slots.some(
+            (old) =>
+              old.id !== replaceId &&
+              Date.parse(old.start) < Date.parse(slot.end) &&
+              Date.parse(old.end) > Date.parse(slot.start),
+          )
+        )
+          throw new Error("overlap");
+      }
+      let daysOff = existing
+        ? own.daysOff!
+        : [...(own.daysOff || []), confirmed];
+      const slots = slot
+        ? [...own.slots.filter((old) => old.id !== replaceId), slot]
+        : own.slots;
+      if (!demoMode)
+        daysOff = await requireApi().updateDaysOff(group.id, daysOff, slots);
+      replaceGroup({
+        ...group,
+        members: group.members.map((member) =>
+          member.id === profile.id ? { ...member, daysOff, slots } : member,
+        ),
+      });
+      setOverlay(null);
+      notify(slot ? "slotSaved" : "dayOffSaved");
     });
   }
   async function confirmDayOff(day: string) {
@@ -935,7 +1106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         baseUrl: url,
         getToken: getOrCreateDeviceToken,
       });
-      const remote = await client.upsertProfile({
+      let remote = await client.upsertProfile({
         nickname: profile.nickname || "Terrence",
         zone,
       });
@@ -943,6 +1114,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const selected = page.items[0]
         ? await client.getGroup(page.items[0].id)
         : null;
+      if (pendingPhotoUri) {
+        try {
+          remote = await client.uploadAvatar(
+            await getProfilePhotoUpload(pendingPhotoUri),
+          );
+          setPendingPhotoUri(null);
+        } catch {
+          notify("photoUnsynced");
+        }
+      }
       // State changes only after profile, memberships and selected group have all loaded.
       setApiUrl(client.baseUrl);
       setReminderEvents([]);
@@ -1001,6 +1182,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         saveAvailability,
         deleteAvailability,
         confirmDayOff,
+        saveDaySchedule,
+        ...activityState,
         removeDayOff,
         createEvent,
         respond,

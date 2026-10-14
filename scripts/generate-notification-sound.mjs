@@ -3,16 +3,17 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 
-// Original JCuki Chime: three soft bell strikes, synthesized from sine partials.
+// Original JCuki Chime: a three-note invitation and a soft answering note, synthesized from sine partials.
 // No samples, recordings, or third-party audio are used. This generator is deterministic.
 const sampleRate = 44100;
-const seconds = 1.48;
+const seconds = 1.78;
 const frames = Math.round(sampleRate * seconds);
 const samples = new Float64Array(frames);
 const notes = [
   { start: 0.035, frequency: 523.251, strength: 0.68 },
-  { start: 0.215, frequency: 783.991, strength: 0.52 },
-  { start: 0.415, frequency: 1046.502, strength: 0.48 },
+  { start: 0.185, frequency: 659.255, strength: 0.52 },
+  { start: 0.345, frequency: 783.991, strength: 0.48 },
+  { start: 0.665, frequency: 1046.502, strength: 0.3 },
 ];
 for (let frame = 0; frame < frames; frame++) {
   const t = frame / sampleRate;

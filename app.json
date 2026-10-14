@@ -3,18 +3,18 @@
     "name": "JCuki",
     "slug": "jcuki",
     "scheme": "jcuki",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F7F8F5",
+    "backgroundColor": "#F6F3EB",
     "locales": {
       "id": "./assets/locales/id.json",
       "en": "./assets/locales/en.json"
     },
     "ios": {
       "bundleIdentifier": "com.terrence.jcuki",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "supportsTablet": true,
       "infoPlist": {
         "CFBundleLocalizations": [
@@ -26,9 +26,9 @@
     },
     "android": {
       "package": "com.terrence.jcuki",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
-        "backgroundColor": "#185F50",
+        "backgroundColor": "#F6F3EB",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -73,10 +73,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 140,
           "resizeMode": "contain",
-          "backgroundColor": "#F7F8F5",
+          "backgroundColor": "#F6F3EB",
           "dark": {
             "image": "./assets/splash-icon-dark.png",
-            "backgroundColor": "#101A16"
+            "backgroundColor": "#171F1A"
           }
         }
       ],
@@ -84,7 +84,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#185F50",
+          "color": "#42664B",
           "defaultChannel": "jcuki-reminders-v1",
           "sounds": [
             "./assets/sounds/jcuki_chime.wav"
@@ -98,17 +98,17 @@
           "cameraPermission": false,
           "microphonePermission": false,
           "colors": {
-            "cropToolbarColor": "#185F50",
+            "cropToolbarColor": "#42664B",
             "cropToolbarIconColor": "#FFFFFF",
             "cropToolbarActionTextColor": "#FFFFFF",
-            "cropBackgroundColor": "#F7F8F5"
+            "cropBackgroundColor": "#F6F3EB"
           },
           "dark": {
             "colors": {
-              "cropToolbarColor": "#192720",
-              "cropToolbarIconColor": "#F1F6F0",
-              "cropToolbarActionTextColor": "#8FDAB5",
-              "cropBackgroundColor": "#101A16"
+              "cropToolbarColor": "#222D25",
+              "cropToolbarIconColor": "#F5F1E7",
+              "cropToolbarActionTextColor": "#B9D5A3",
+              "cropBackgroundColor": "#171F1A"
             }
           }
         }

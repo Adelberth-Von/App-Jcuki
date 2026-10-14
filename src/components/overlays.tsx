@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   Share,
   View,
@@ -10,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as Crypto from "expo-crypto";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useApp, type Overlay } from "../store";
 import {
   addDays,
@@ -137,6 +139,15 @@ function StatusChoices({
 }
 function DayOffConfirmation({ day }: { day: string }) {
   const { t, prefs, zone, colors, busy, confirmDayOff, setOverlay } = useApp();
+  async function confirm(withHours: boolean) {
+    setError("");
+    try {
+      await confirmDayOff(day);
+      if (withHours) setOverlay({ kind: "slot", day });
+    } catch (e) {
+      setError(errorText(e, t));
+    }
+  }
   const [error, setError] = useState("");
   return (
     <>
@@ -177,19 +188,17 @@ function DayOffConfirmation({ day }: { day: string }) {
       </Txt>
       <FormError error={error} />
       <Button
-        title={busy ? t("syncing") : t("confirmDayOff")}
-        icon="checkmark"
+        title={busy ? t("syncing") : t("confirmAndSetTime")}
+        icon="time-outline"
         disabled={busy}
-        onPress={() => {
-          setError("");
-          void confirmDayOff(day).catch((e) => setError(errorText(e, t)));
-        }}
+        onPress={() => void confirm(true)}
       />
       <Button
-        title={t("cancel")}
+        title={t("confirmOnly")}
         kind="secondary"
+        icon="checkmark"
         disabled={busy}
-        onPress={() => setOverlay(null)}
+        onPress={() => void confirm(false)}
       />
     </>
   );
@@ -206,131 +215,271 @@ function SlotForm({
     group,
     profile,
     busy,
-    saveAvailability,
+    saveDaySchedule,
     deleteAvailability,
+    colors,
+    time,
     setOverlay,
   } = useApp();
-  const slot = overlay.slot,
-    own = group?.members.find((m) => m.id === profile.id);
+  const own = group?.members.find((member) => member.id === profile.id);
+  const slot = overlay.slot;
   const day = own?.daysOff?.find(
-    (d) =>
-      d.date === overlay.day ||
-      (!overlay.day && slot && localDate(slot.start, d.zone) === d.date),
+    (item) =>
+      item.date === overlay.day ||
+      (!overlay.day && slot && localDate(slot.start, item.zone) === item.date),
   );
   const [fallbackDay] = useState(() => localDate(Date.now(), zone));
-  const savedZone = day?.zone || zone,
-    selected = day?.date || overlay.day || fallbackDay;
+  const selected = day?.date || overlay.day || fallbackDay,
+    savedZone = day?.zone || zone;
+  const [includeHours, setIncludeHours] = useState(!!day || !!slot);
   const [start, setStart] = useState(
-      slot ? clock(slot.start, savedZone) : "20:00",
-    ),
-    [end, setEnd] = useState(slot ? clock(slot.end, savedZone) : "23:00");
+    slot ? clock(slot.start, savedZone) : "20:00",
+  );
+  const [end, setEnd] = useState(slot ? clock(slot.end, savedZone) : "23:00");
   const [overnight, setOvernight] = useState(
-      !!slot && localDate(slot.end, savedZone) !== selected,
-    ),
-    [error, setError] = useState("");
+    !!slot && localDate(slot.end, savedZone) !== selected,
+  );
+  const [error, setError] = useState("");
+  let preview: { start: string; end: string; minutes: number } | undefined;
+  try {
+    const a = wallToUTC(selected, start, savedZone),
+      b = wallToUTC(
+        overnight ? addDays(selected, 1) : selected,
+        end,
+        savedZone,
+      );
+    const minutes = (Date.parse(b) - Date.parse(a)) / 60000;
+    if (minutes > 0 && minutes <= 1440) preview = { start: a, end: b, minutes };
+  } catch {}
   async function save() {
     setError("");
     try {
-      if (!day) throw new Error("DAY_OFF_REQUIRED");
-      const a = wallToUTC(selected, start, savedZone),
-        b = wallToUTC(
-          overnight ? addDays(selected, 1) : selected,
-          end,
-          savedZone,
-        );
-      if (
-        Date.parse(b) <= Date.parse(a) ||
-        Date.parse(b) - Date.parse(a) > 86400000
-      )
-        throw new Error("invalidRange");
-      if (!slot && Date.parse(a) < Date.now()) throw new Error("pastTime");
-      await saveAvailability(
-        {
+      let next;
+      if (includeHours) {
+        if (!preview) throw new Error("invalidRange");
+        next = {
           id: slot?.id || Crypto.randomUUID(),
-          start: a,
-          end: b,
-          status: "yes",
-        },
-        slot?.id,
-      );
+          start: preview.start,
+          end: preview.end,
+          status: "yes" as const,
+        };
+      }
+      await saveDaySchedule(selected, next, slot?.id);
     } catch (e) {
       setError(errorText(e, t));
     }
   }
-  if (!day)
-    return (
-      <>
-        <Txt muted>{t("dayOffRequired")}</Txt>
-        <Button
-          title={t("confirmDayOff")}
-          onPress={() => setOverlay({ kind: "dayOff", day: selected })}
-        />
-      </>
-    );
   return (
-    <>
-      <Row between>
-        <View style={{ flex: 1 }}>
-          <Txt size={20} weight="bold">
-            {dayText(selected, prefs.language, {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: 22,
+          paddingBottom: 22,
+          gap: 18,
+        }}
+      >
+        <Card
+          style={{
+            backgroundColor: colors.accentSoft,
+            borderColor: colors.accentSoft,
+          }}
+        >
+          <Row>
+            <View
+              style={{
+                width: 54,
+                height: 62,
+                borderRadius: 16,
+                backgroundColor: colors.surface,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Txt size={26} weight="semibold" color={colors.accent}>
+                {Number(selected.slice(-2))}
+              </Txt>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Txt size={19} weight="semibold">
+                {dayText(selected, prefs.language, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </Txt>
+              <Txt muted size={12}>
+                {savedZone.split("/").at(-1)?.replace(/_/g, " ")} ·{" "}
+                {zoneAbbreviation(savedZone, selected + "T12:00:00Z")}
+              </Txt>
+            </View>
+          </Row>
+          <View style={{ marginTop: 14 }}>
+            <Pill
+              label={t(day ? "confirmedDayOff" : "notConfirmed")}
+              tone={day ? "green" : "muted"}
+            />
+          </View>
+        </Card>
+        {!day && (
+          <Txt size={14} muted>
+            {t("oneStepDayHint")}
           </Txt>
-          <Txt size={12} muted>
-            {savedZone} · {zoneAbbreviation(savedZone, selected + "T12:00:00Z")}
-          </Txt>
-        </View>
-        <Icon name="checkmark-circle" size={24} />
-      </Row>
-      <Txt muted size={14}>
-        {t("playTimeDescription")}
-      </Txt>
-      <Card style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-        <DateControl
-          label={t("startTime")}
-          mode="time"
-          value={start}
-          onChange={setStart}
-        />
-        <Divider />
-        <DateControl
-          label={t("endTime")}
-          mode="time"
-          value={end}
-          onChange={setEnd}
-        />
-      </Card>
-      <ToggleRow
-        label={t("crossMidnight")}
-        value={overnight}
-        onChange={setOvernight}
-      />
-      <FormError error={error} />
-      <Button
-        title={busy ? t("syncing") : t("savePlayTime")}
-        icon="checkmark"
-        onPress={() => void save()}
-        disabled={busy}
-      />
-      {slot && (
+        )}
+        {!slot && (
+          <ToggleRow
+            label={t("includePlayingHours")}
+            description={t("hoursOptionalHint")}
+            value={includeHours}
+            onChange={setIncludeHours}
+          />
+        )}
+        {includeHours && (
+          <>
+            <View style={{ gap: 10 }}>
+              <Txt size={13} weight="semibold">
+                {t("quickTimes")}
+              </Txt>
+              <Row style={{ gap: 8 }}>
+                {(
+                  [
+                    ["afternoon", "16:00", "18:00", false],
+                    ["evening", "20:00", "23:00", false],
+                    ["lateNight", "22:00", "01:00", true],
+                  ] as const
+                ).map(([label, a, b, night]) => {
+                  const active =
+                    start === a && end === b && overnight === night;
+                  return (
+                    <Press
+                      key={label}
+                      selected={active}
+                      label={t(label) + ", " + a + " – " + b}
+                      onPress={() => {
+                        setStart(a);
+                        setEnd(b);
+                        setOvernight(night);
+                      }}
+                      style={{
+                        flex: 1,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: active ? colors.accent : colors.line,
+                        backgroundColor: active ? colors.accentSoft : colors.bg,
+                      }}
+                    >
+                      <View
+                        style={{ padding: 10, alignItems: "center", gap: 3 }}
+                      >
+                        <Txt
+                          size={13}
+                          weight="semibold"
+                          color={active ? colors.accent : colors.text}
+                        >
+                          {t(label)}
+                        </Txt>
+                        <Txt size={12} muted>
+                          {a} – {b}
+                        </Txt>
+                      </View>
+                    </Press>
+                  );
+                })}
+              </Row>
+            </View>
+            <Card style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+              <DateControl
+                label={t("startTime")}
+                mode="time"
+                value={start}
+                onChange={setStart}
+              />
+              <Divider />
+              <DateControl
+                label={t("endTime")}
+                mode="time"
+                value={end}
+                onChange={setEnd}
+              />
+            </Card>
+            <ToggleRow
+              label={t("crossMidnight")}
+              description={overnight ? t("overnightHint") : undefined}
+              value={overnight}
+              onChange={setOvernight}
+            />
+            {preview && (
+              <View
+                style={{
+                  backgroundColor: colors.accentSoft,
+                  borderRadius: 20,
+                  padding: 18,
+                  gap: 6,
+                }}
+              >
+                <Txt size={12} color={colors.accent} weight="medium">
+                  {t("timeSummary")}
+                </Txt>
+                <Txt size={24} weight="semibold">
+                  {time(preview.start, savedZone)} –{" "}
+                  {time(preview.end, savedZone)}
+                  {overnight ? " (+1)" : ""}
+                </Txt>
+                <Txt size={13} muted>
+                  {preview.minutes} {t("minute")} ·{" "}
+                  {zoneAbbreviation(savedZone, preview.start)}
+                </Txt>
+              </View>
+            )}
+          </>
+        )}
+        <FormError error={error} />
+      </ScrollView>
+      <View
+        style={{
+          paddingHorizontal: 22,
+          paddingTop: 14,
+          borderTopWidth: 1,
+          borderTopColor: colors.line,
+          gap: 6,
+        }}
+      >
         <Button
-          title={t("removePlayTime")}
-          kind="danger"
-          icon="trash-outline"
-          disabled={busy}
-          onPress={() =>
-            setOverlay({
-              kind: "confirm",
-              title: t("removePlayTime"),
-              description: t("removePlayTimeDescription"),
-              onConfirm: () => deleteAvailability(slot.id),
-            })
+          title={
+            busy
+              ? t("syncing")
+              : t(
+                  includeHours
+                    ? "saveDaySchedule"
+                    : day
+                      ? "save"
+                      : "confirmDayOff",
+                )
           }
+          icon="checkmark"
+          disabled={busy}
+          onPress={() => void save()}
         />
-      )}
-    </>
+        {slot && (
+          <Button
+            title={t("removePlayTime")}
+            kind="text"
+            textColor={colors.danger}
+            icon="trash-outline"
+            disabled={busy}
+            onPress={() =>
+              setOverlay({
+                kind: "confirm",
+                title: t("removePlayTime"),
+                description: t("removePlayTimeDescription"),
+                onConfirm: () => deleteAvailability(slot.id),
+              })
+            }
+          />
+        )}
+      </View>
+    </View>
   );
 }
 function EventForm({
@@ -829,10 +978,11 @@ export function OverlayHost() {
   const { overlay, setOverlay, t, colors, busy } = useApp(),
     insets = useSafeAreaInsets();
   const [confirming, setConfirming] = useState(false);
+  const reduced = useReducedMotion();
   if (!overlay) return null;
   const titles: Record<Overlay["kind"], string> = {
     slot:
-      overlay.kind === "slot" && overlay.slot ? "editPlayTime" : "addPlayTime",
+      overlay.kind === "slot" && overlay.slot ? "editPlayTime" : "daySchedule",
     dayOff: "confirmDayOff",
     event: "makePlan",
     details: "planDetails",
@@ -851,7 +1001,7 @@ export function OverlayHost() {
   return (
     <Modal
       visible
-      animationType="slide"
+      animationType={reduced ? "none" : "slide"}
       transparent
       statusBarTranslucent
       onRequestClose={() => !busy && !confirming && setOverlay(null)}
@@ -861,19 +1011,27 @@ export function OverlayHost() {
         style={{
           flex: 1,
           justifyContent: "flex-end",
-          backgroundColor: "#11122377",
+          backgroundColor: "#101A1677",
+          paddingTop: insets.top,
         }}
       >
+        <Pressable
+          style={{ flex: 1 }}
+          accessibilityLabel={t("close")}
+          accessibilityRole="button"
+          onPress={() => !busy && !confirming && setOverlay(null)}
+        />
         <View
           accessibilityViewIsModal
           style={{
             maxHeight: "92%",
+            height: overlay.kind === "slot" ? "92%" : undefined,
             width: "100%",
             maxWidth: 620,
             alignSelf: "center",
             backgroundColor: colors.surface,
-            borderTopLeftRadius: 30,
-            borderTopRightRadius: 30,
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
             paddingBottom: Math.max(insets.bottom, 18),
           }}
         >
@@ -897,8 +1055,8 @@ export function OverlayHost() {
             }}
           >
             <Txt
-              size={21}
-              weight="bold"
+              size={24}
+              weight="semibold"
               heading
               style={{ flex: 1, letterSpacing: -0.4 }}
             >
@@ -906,91 +1064,95 @@ export function OverlayHost() {
             </Txt>
             <IconButton
               label={t("close")}
+              disabled={busy || confirming}
               icon="close"
               onPress={() => !busy && !confirming && setOverlay(null)}
             />
           </Row>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 20, paddingTop: 10, gap: 17 }}
-          >
-            {overlay.kind === "dayOff" && (
-              <DayOffConfirmation key={overlay.day} day={overlay.day} />
-            )}
-            {overlay.kind === "slot" && (
-              <SlotForm
-                key={overlay.slot?.id || overlay.day || "new"}
-                overlay={overlay}
-              />
-            )}
-            {overlay.kind === "event" && <EventForm overlay={overlay} />}
-            {overlay.kind === "createGroup" && <GroupForm join={false} />}
-            {overlay.kind === "joinGroup" && <GroupForm join />}
-            {overlay.kind === "invite" && <Invite />}
-            {overlay.kind === "details" && <Details id={overlay.id} />}
-            {overlay.kind === "zone" && <ZonePicker />}
-            {overlay.kind === "connection" && <Connection />}
-            {overlay.kind === "choice" &&
-              overlay.choices.map((choice) => (
-                <Press
-                  key={choice.value}
-                  selected={choice.value === overlay.value}
-                  label={choice.label}
-                  onPress={() => {
-                    setOverlay(null);
-                    overlay.onSelect(choice.value);
-                  }}
-                  style={{
-                    backgroundColor:
-                      choice.value === overlay.value
-                        ? colors.accentSoft
-                        : colors.bg,
-                    borderRadius: 13,
-                  }}
-                >
-                  <Row between style={{ padding: 15 }}>
-                    <Txt
-                      size={14}
-                      weight={
-                        choice.value === overlay.value ? "semibold" : "regular"
-                      }
-                    >
-                      {choice.label}
-                    </Txt>
-                    {choice.value === overlay.value && (
-                      <Icon name="checkmark-circle" color={colors.accent} />
-                    )}
-                  </Row>
-                </Press>
-              ))}
-            {overlay.kind === "confirm" && (
-              <>
-                <Txt size={13} muted>
-                  {overlay.description}
-                </Txt>
-                <Button
-                  title={overlay.title}
-                  kind="danger"
-                  disabled={busy || confirming}
-                  onPress={() => {
-                    setConfirming(true);
-                    void overlay
-                      .onConfirm()
-                      .catch(() => {})
-                      .finally(() => setConfirming(false));
-                  }}
-                />
-                <Button
-                  title={t("cancel")}
-                  kind="secondary"
-                  disabled={busy || confirming}
-                  onPress={() => setOverlay(null)}
-                />
-              </>
-            )}
-          </ScrollView>
-          <Toast />
+          {overlay.kind === "slot" ? (
+            <SlotForm
+              key={overlay.slot?.id || overlay.day || "new"}
+              overlay={overlay}
+            />
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ padding: 22, paddingTop: 14, gap: 20 }}
+            >
+              {overlay.kind === "dayOff" && (
+                <DayOffConfirmation key={overlay.day} day={overlay.day} />
+              )}
+              {overlay.kind === "event" && <EventForm overlay={overlay} />}
+              {overlay.kind === "createGroup" && <GroupForm join={false} />}
+              {overlay.kind === "joinGroup" && <GroupForm join />}
+              {overlay.kind === "invite" && <Invite />}
+              {overlay.kind === "details" && <Details id={overlay.id} />}
+              {overlay.kind === "zone" && <ZonePicker />}
+              {overlay.kind === "connection" && <Connection />}
+              {overlay.kind === "choice" &&
+                overlay.choices.map((choice) => (
+                  <Press
+                    key={choice.value}
+                    selected={choice.value === overlay.value}
+                    label={choice.label}
+                    onPress={() => {
+                      setOverlay(null);
+                      overlay.onSelect(choice.value);
+                    }}
+                    style={{
+                      backgroundColor:
+                        choice.value === overlay.value
+                          ? colors.accentSoft
+                          : colors.bg,
+                      borderRadius: 13,
+                    }}
+                  >
+                    <Row between style={{ padding: 15 }}>
+                      <Txt
+                        size={14}
+                        weight={
+                          choice.value === overlay.value
+                            ? "semibold"
+                            : "regular"
+                        }
+                      >
+                        {choice.label}
+                      </Txt>
+                      {choice.value === overlay.value && (
+                        <Icon name="checkmark-circle" color={colors.accent} />
+                      )}
+                    </Row>
+                  </Press>
+                ))}
+              {overlay.kind === "confirm" && (
+                <>
+                  <Txt size={13} muted>
+                    {overlay.description}
+                  </Txt>
+                  <Button
+                    title={overlay.title}
+                    kind="danger"
+                    disabled={busy || confirming}
+                    onPress={() => {
+                      setConfirming(true);
+                      void overlay
+                        .onConfirm()
+                        .catch(() => {})
+                        .finally(() => setConfirming(false));
+                    }}
+                  />
+                  <Button
+                    title={t("cancel")}
+                    kind="secondary"
+                    disabled={busy || confirming}
+                    onPress={() => setOverlay(null)}
+                  />
+                </>
+              )}
+            </ScrollView>
+          )}
+          <Toast inModal />
         </View>
       </KeyboardAvoidingView>
     </Modal>

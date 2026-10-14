@@ -1,4 +1,6 @@
 import type {
+  Activity,
+  PushDevice,
   Availability,
   AvailabilityStatus,
   DayOff,
@@ -49,6 +51,11 @@ export interface APIClient {
     mime: "image/jpeg" | "image/png";
   }): Promise<Profile>;
   removeAvatar(): Promise<Profile>;
+  listActivity(groupId: string, options?: PageOptions): Promise<Page<Activity>>;
+  registerPushDevice(
+    device: PushDevice,
+  ): Promise<{ ok: boolean; deliveryEnabled: boolean }>;
+  unregisterPushDevice(): Promise<void>;
   avatarHeaders(): Promise<{ Authorization: string }>;
 }
 export function createApiClient({
@@ -166,6 +173,12 @@ export function createApiClient({
     },
     uploadAvatar: (image) => request("/me/avatar", "PUT", image),
     removeAvatar: () => request("/me/avatar", "DELETE"),
+    listActivity: (groupId, options) =>
+      request(groupPath(groupId) + "/activity" + query(options)),
+    registerPushDevice: (device) => request("/me/push", "PUT", device),
+    unregisterPushDevice: async () => {
+      await request("/me/push", "DELETE");
+    },
     avatarHeaders: headers,
   };
 }

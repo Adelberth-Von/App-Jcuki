@@ -22,6 +22,7 @@ export interface AppPreferences {
   weeklyReminder: WeeklyReminderPreferences;
   eventReminderMinutes: number;
   notificationSound: boolean;
+  activityNotifications: boolean;
 }
 
 export const PREFERENCES_STORAGE_KEY = "@jcuki/preferences/v1";
@@ -60,6 +61,7 @@ export function getDefaultPreferences(): AppPreferences {
     weeklyReminder: { enabled: false, weekday: 1, hour: 19, minute: 0 },
     eventReminderMinutes: 15,
     notificationSound: true,
+    activityNotifications: false,
   };
 }
 
@@ -133,6 +135,10 @@ export function normalizePreferences(
       1440,
       defaults.eventReminderMinutes,
     ),
+    activityNotifications:
+      typeof raw.activityNotifications === "boolean"
+        ? raw.activityNotifications
+        : defaults.activityNotifications,
     notificationSound:
       typeof raw.notificationSound === "boolean"
         ? raw.notificationSound

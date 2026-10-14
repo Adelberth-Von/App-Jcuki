@@ -35,7 +35,15 @@ export function CalendarMonth({
   onSelect: (day: string) => void;
 }) {
   const { colors, t, prefs, group, profile, zone } = useApp();
-  const [month, setMonth] = useState(selected.slice(0, 7) + "-01");
+  const [view, setView] = useState(() => ({
+    selection: selected,
+    month: selected.slice(0, 7) + "-01",
+  }));
+  const month =
+    view.selection === selected ? view.month : selected.slice(0, 7) + "-01";
+  function setMonth(next: string) {
+    setView({ selection: selected, month: next });
+  }
   const [width, setWidth] = useState(336);
   const gridWidth = Math.max(336, width),
     today = localDate(useMinuteClock(), zone);
@@ -342,7 +350,7 @@ export function MyDaysOff({ omitFirst = false }: { omitFirst?: boolean }) {
   );
 }
 export function FriendsSchedule({ date }: { date?: string }) {
-  const { t, group, profile, time, colors, prefs } = useApp();
+  const { t, group, profile, time, colors, prefs, zone, setOverlay } = useApp();
   const [page, setPage] = useState(1),
     [expanded, setExpanded] = useState<string | null>(null),
     [dayPage, setDayPage] = useState(1);
@@ -361,6 +369,10 @@ export function FriendsSchedule({ date }: { date?: string }) {
         <Empty
           title={group ? t("emptyFriends") : t("joinFirst")}
           icon="people-outline"
+          action={{
+            title: t(group ? "invite" : "joinGroup"),
+            onPress: () => setOverlay({ kind: group ? "invite" : "joinGroup" }),
+          }}
         />
       )}
       {result.items.map((m) => {
@@ -369,6 +381,7 @@ export function FriendsSchedule({ date }: { date?: string }) {
               date ? d.date === date : d.date >= localDate(now, d.zone),
             )
             .sort((a, b) => a.date.localeCompare(b.date)),
+          hours = days[0] ? playingSlots(m.slots, days[0]) : [],
           open = expanded === m.id,
           dayResult = paginate(days, dayPage, 4);
         return (
@@ -401,6 +414,16 @@ export function FriendsSchedule({ date }: { date?: string }) {
                         })
                       : t("notConfirmed")}
                   </Txt>
+                  {hours.length > 0 && (
+                    <Txt size={12} muted style={{ marginTop: 3 }}>
+                      {t("yourTime")}: {time(hours[0].start)} –{" "}
+                      {time(hours[0].end)}
+                      {localDate(hours[0].start, zone) !==
+                      localDate(hours[0].end, zone)
+                        ? " (+1)"
+                        : ""}
+                    </Txt>
+                  )}
                 </View>
                 <Icon
                   name={open ? "chevron-up" : "chevron-down"}

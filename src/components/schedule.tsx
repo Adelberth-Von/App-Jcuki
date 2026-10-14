@@ -3,7 +3,7 @@ import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useMinuteClock } from "../hooks/useMinuteClock";
 import { useApp } from "../store";
-import { eventState, formatDate, paginate } from "../lib/domain";
+import { eventState, formatDate, localDate, paginate } from "../lib/domain";
 import {
   Button,
   Card,
@@ -32,9 +32,9 @@ export function DemoNotice() {
       between
       style={{
         gap: 8,
-        borderBottomColor: colors.line,
-        borderBottomWidth: 1,
-        paddingBottom: 8,
+        backgroundColor: colors.surfaceAlt,
+        padding: 14,
+        borderRadius: 20,
       }}
     >
       <Row style={{ gap: 7, flex: 1 }}>
@@ -78,6 +78,7 @@ export function AgendaList({ full = false }: { full?: boolean }) {
     loadMoreEvents,
     loadHistory,
     busy,
+    zone,
   } = useApp();
   const now = useMinuteClock();
   const [filter, setFilter] = useState("all"),
@@ -98,13 +99,13 @@ export function AgendaList({ full = false }: { full?: boolean }) {
   const p = paginate(items, page, 4);
   return (
     <Card>
-      <SectionTitle
-        title={t("agenda")}
-        action={full ? t("makePlan") : t("viewAll")}
-        onAction={() =>
-          full ? setOverlay({ kind: "event" }) : router.push("/agenda")
-        }
-      />
+      {!full && (
+        <SectionTitle
+          title={t("agenda")}
+          action={t("viewAll")}
+          onAction={() => router.push("/agenda")}
+        />
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -122,7 +123,7 @@ export function AgendaList({ full = false }: { full?: boolean }) {
                 void loadHistory().catch(() => {});
             }}
             style={{
-              borderRadius: 10,
+              borderRadius: 30,
               backgroundColor: filter === v ? colors.accentSoft : colors.bg,
             }}
           >
@@ -178,11 +179,14 @@ export function AgendaList({ full = false }: { full?: boolean }) {
                 </Txt>
               </View>
               <View style={{ flex: 1 }}>
-                <Txt size={13} weight="semibold">
+                <Txt size={15} weight="semibold">
                   {e.title}
                 </Txt>
                 <Txt size={10} muted style={{ marginTop: 3 }}>
                   {time(e.start)} – {time(e.end)}
+                  {localDate(e.start, zone) !== localDate(e.end, zone)
+                    ? " (+1)"
+                    : ""}
                 </Txt>
                 <View style={{ marginTop: 7 }}>
                   <StatusPill event={e} />
@@ -193,14 +197,22 @@ export function AgendaList({ full = false }: { full?: boolean }) {
           </Press>
         ))
       ) : (
-        <Empty title={t("emptyAgenda")} icon="calendar-outline" />
+        <Empty
+          title={t("emptyAgenda")}
+          description={t("noAgendaDescription")}
+          icon="calendar-outline"
+          action={{
+            title: t("makePlan"),
+            onPress: () => setOverlay({ kind: "event" }),
+          }}
+        />
       )}
       <Pager page={p.page} pages={p.pages} onPage={setPage} />
       {(filter === "past"
         ? group?.historyNextCursor
         : group?.eventsNextCursor) && (
         <Button
-          title={t("next")}
+          title={t("loadMore")}
           kind="text"
           disabled={busy}
           onPress={() =>
@@ -215,7 +227,17 @@ export function AgendaList({ full = false }: { full?: boolean }) {
   );
 }
 export function ReminderCard() {
-  const { t, colors } = useApp();
+  const { t, colors, prefs } = useApp();
+  const reminder = prefs.weeklyReminder;
+  const reminderTime = new Intl.DateTimeFormat(
+    prefs.language === "id" ? "id-ID" : "en-GB",
+    {
+      timeZone: "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: prefs.timeFormat === "24h" ? "h23" : "h12",
+    },
+  ).format(new Date(Date.UTC(2000, 0, 1, reminder.hour, reminder.minute)));
   return (
     <View
       style={{ backgroundColor: colors.peach, borderRadius: 22, padding: 22 }}
@@ -235,15 +257,17 @@ export function ReminderCard() {
         </View>
         <View style={{ flex: 1 }}>
           <Txt weight="semibold" size={16} color={colors.peachText}>
-            {t("newWeek")}
+            {t(reminder.enabled ? "reminderOn" : "newWeek")}
           </Txt>
           <Txt size={11} color={colors.peachText} style={{ marginTop: 5 }}>
-            {t("newWeekDescription")}
+            {reminder.enabled
+              ? t("weekday" + (reminder.weekday - 1)) + " · " + reminderTime
+              : t("newWeekDescription")}
           </Txt>
         </View>
       </Row>
       <Button
-        title={t("setReminder")}
+        title={t(reminder.enabled ? "editReminder" : "setReminder")}
         icon="arrow-forward"
         kind="text"
         onPress={() => router.push("/(tabs)/settings")}
