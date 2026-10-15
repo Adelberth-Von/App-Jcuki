@@ -1,37 +1,94 @@
-name: Android keyboard diagnostics
+name: APK regression recheck
 on:
   push:
     branches: [codex/native-keyboard-checks]
 permissions:
   contents: read
   actions: read
+env:
+  EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 jobs:
-  diagnostics:
+  native:
+    if: contains(github.event.head_commit.message, 'Run native checks')
+    name: Recheck Android ${{ matrix.api }} release APK
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [33, 35]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify the tested app exactly matches the compiled APK source
+        run: |
+          git diff --exit-code 9920f31d3cbea2599a2c002c1c725242600f4577 HEAD -- src app.json app.config.js package.json package-lock.json plugins assets backend supabase
+      - uses: actions/download-artifact@v4
+        with:
+          name: JCuki-Android13-preview
+          run-id: 38706179402
+          github-token: ${{ github.token }}
+          path: artifacts
+      - run: sha256sum artifacts/JCuki-Android13-preview.apk
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - run: sudo chmod a+rw /dev/kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 2048M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: false
+          script: |
+            adb shell settings put secure show_ime_with_hard_keyboard 1
+            adb install -r artifacts/JCuki-Android13-preview.apk
+            ANDROID_API_LEVEL=${{ matrix.api }} python scripts/native-smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JCuki-native-recheck-${{ matrix.api }}
+          path: native-results/
+          if-no-files-found: ignore
+          retention-days: 7
+  publish:
+    name: Publish the verified immutable APK
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: JCuki-native-android-33
+          name: JCuki-Android13-preview
           run-id: 38706179402
           github-token: ${{ github.token }}
-          path: diagnostics
-      - name: Inspect numeric keyboard and focused-input geometry only
+          path: artifacts
+      - name: Publish only the current main application source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python - <<'PY'
-          import re
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          dump=Path('diagnostics/failure-keyboard.txt').read_text()
-          for chunk in re.split(r'(?=\s*Window #\d+ Window\{)',dump):
-              ime=bool(re.search(r'^\s*Window #\d+ Window\{[^\n]*\bInputMethod\b',chunk))
-              for line in chunk.splitlines():
-                  if ime or re.search(r'(?i)(?:type=ime|ITYPE_IME)',line):
-                      values=re.findall(r'(?:mFrame|frame|mGivenContentInsets|mContentInsets|mGivenVisibleInsets|mType|type|mVisible|visible)\s*=\s*(?:\[[\d, -]+\](?:\[[\d, -]+\])?|[A-Za-z_]+)',line)
-                      if values: print('IME' if ime else 'SOURCE', ' '.join(values))
-          root=ET.fromstring(Path('diagnostics/failure-ui.xml').read_text())
-          for node in root.iter('node'):
-              control=node.get('resource-id','').split('/')[-1]
-              if re.fullmatch(r'auth-[A-Za-z]+',control):
-                  print('INPUT',control,node.get('bounds'),'focused='+node.get('focused',''))
-          PY
+          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$current" = '9920f31d3cbea2599a2c002c1c725242600f4577'
+          cat > /tmp/notes.md <<'NOTES'
+          Jcuki 1.5.0 for Android 13+. Keyboard-aware forms, authenticated persistent profile photos, clearer full-page create/join flows and real account sync status. Supabase accounts work across devices without verification emails.
+          
+          This exact APK passed release signature/minSdk checks and Android 13/API 33 plus Android 15/API 35 regression checks. The checks use labelled QA accounts and verify keyboard visibility, server profile/group persistence, fresh-install login and offline photo cache.
+          
+          Install the APK directly; Metro and Expo Go are not needed. This is an internal preview signed with the Expo template debug key. Background push still needs the EAS/Firebase/APNs configuration in the repository guide. Physical iPhone distribution requires Apple signing.
+          NOTES
+          printf '\nNative validation: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> /tmp/notes.md
+          tag='v1.5.0-preview-16'
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then exit 0; fi
+          gh release create "$tag" artifacts/JCuki-Android13-preview.apk --repo "$GITHUB_REPOSITORY" --target 9920f31d3cbea2599a2c002c1c725242600f4577 --title 'JCuki 1.5.0 — Android preview 16' --notes-file /tmp/notes.md --latest
