@@ -1,0 +1,37 @@
+name: Android keyboard diagnostics
+on:
+  push:
+    branches: [codex/native-keyboard-checks]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnostics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: JCuki-native-android-33
+          run-id: 38706179402
+          github-token: ${{ github.token }}
+          path: diagnostics
+      - name: Inspect numeric keyboard and focused-input geometry only
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          dump=Path('diagnostics/failure-keyboard.txt').read_text()
+          for chunk in re.split(r'(?=\s*Window #\d+ Window\{)',dump):
+              ime=bool(re.search(r'^\s*Window #\d+ Window\{[^\n]*\bInputMethod\b',chunk))
+              for line in chunk.splitlines():
+                  if ime or re.search(r'(?i)(?:type=ime|ITYPE_IME)',line):
+                      values=re.findall(r'(?:mFrame|frame|mGivenContentInsets|mContentInsets|mGivenVisibleInsets|mType|type|mVisible|visible)\s*=\s*(?:\[[\d, -]+\](?:\[[\d, -]+\])?|[A-Za-z_]+)',line)
+                      if values: print('IME' if ime else 'SOURCE', ' '.join(values))
+          root=ET.fromstring(Path('diagnostics/failure-ui.xml').read_text())
+          for node in root.iter('node'):
+              control=node.get('resource-id','').split('/')[-1]
+              if re.fullmatch(r'auth-[A-Za-z]+',control):
+                  print('INPUT',control,node.get('bounds'),'focused='+node.get('focused',''))
+          PY
