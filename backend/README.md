@@ -1,4 +1,4 @@
-> APK 1.3.0 memakai Supabase yang sudah terpasang. Baca [panduan Supabase](../docs/SUPABASE.md). Dokumen di bawah menjelaskan backend Cloudflare alternatif.
+> APK 1.4.0 memakai Supabase Auth + Edge Function yang sudah terpasang. Baca [panduan akun dan Supabase](../docs/SUPABASE.md). Worker Cloudflare di bawah tetap tersedia sebagai backend legacy/fixture pengembangan; ia belum menyediakan adapter Supabase Auth/Admin untuk login APK 1.4.0. Mengubah URL APK ke Worker saja tidak mengaktifkan akun.
 
 # JCuki shared scheduling API
 
@@ -42,7 +42,7 @@ The Android emulator can use `http://10.0.2.2:8787`; iOS simulator can use `http
 
 The native client generates a random 256-bit device secret and stores it in Expo SecureStore (web preview uses separate local browser storage). The API receives it as `Authorization: Bearer <64 lowercase hex characters>` over HTTPS. Only its SHA-256 digest is persisted as the member ID. Each install/browser is its own identity. Nicknames are display names and cannot be used to impersonate another identity.
 
-This release has no password login, account recovery or automatic identity transfer between devices. Clearing application data/uninstalling may lose access. A production rollout needing recoverable accounts should integrate an identity provider before store distribution.
+The legacy Worker uses device credentials. The official mobile release now uses Supabase Auth and the Postgres adapter in `supabase/functions/jcuki/`; that deployment validates Auth JWTs and supports linking unclaimed device profiles. See the Supabase guide before connecting a current APK to an alternative backend.
 
 Group access requires membership. A random 12-character code grants membership when entered deliberately. Share it only with intended members. Groups and users are each limited to 50 memberships, enforced within SQLite writes. Group members can view each other's availability and profile photos, propose events, and respond independently. Only an event creator can cancel that event.
 

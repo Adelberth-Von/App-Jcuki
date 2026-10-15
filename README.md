@@ -18,16 +18,18 @@ APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasi
 
 Untuk memasang: buka APK di Android 13 atau lebih baru, izinkan pemasangan dari sumber browser/file manager jika diminta OS, lalu buka Jcuki. iPhone memerlukan build terpisah melalui EAS dan Apple signing; APK tidak dapat dipasang di iPhone. Lihat [panduan build](docs/BUILD.md).
 
-## Pembaruan 1.3.0
+## Pembaruan 1.4.0
 
-Server Supabase sudah dipasang dan menjadi koneksi bawaan. Mulai dari panggilan → buat/gabung grup → salin kode/link pada tab Grup. Tidak perlu mengisi URL server. [Panduan Supabase dan undangan](docs/SUPABASE.md).
+**Akun langsung aktif, tersimpan di Supabase.** Daftar dengan nama lengkap, nickname, email, password, dan konfirmasi password. Setelah berhasil, aplikasi langsung masuk tanpa mengirim email verifikasi. Login di perangkat lain memulihkan profil, grup, jadwal, dan rencana akun yang sama. Password dikelola dan di-hash oleh Supabase Auth; konfirmasi password tidak disimpan.
 
-Zona waktu mengikuti perangkat otomatis, tersedia tombol **Keluar demo**, tema navigator/latar native mengikuti Light/Dark, dan formatter kalender digunakan ulang untuk mengurangi pekerjaan saat menekan kontrol. Kelancaran serta kilatan layar masih perlu diverifikasi pada HP fisik; pengujian browser bukan pengganti pengukuran frame native.
+**Liquid navigation dan tampilan kaca:** navigasi kapsul mengambang dengan indikator bergerak, kartu transparan, gradasi lembut, Light/Dark/System, serta halaman login, pendaftaran, dan akun baru. iOS 26+ memakai Liquid Glass native ketika tersedia; Android 13+ memakai blur pada navigasi dan lapisan transparan ringan untuk kartu. Reduce Motion dan Reduce Transparency dihormati. [Keputusan desain](docs/UX-DESIGN.md).
+
+Server Supabase tetap menjadi koneksi bawaan. Zona waktu otomatis mengikuti perangkat, undangan menyediakan kode/link yang bisa disalin, dan demo memiliki tombol kembali. [Panduan akun dan server](docs/SUPABASE.md).
 
 ## Apa yang diperbaiki
 
 - **Identitas baru:** tiga teman mengelilingi jam, loading dengan gerak napas lembut dan transisi masuk. Tidak ada waktu tunggu buatan; animasi mengikuti Reduce Motion.
-- **Kenalan dua langkah:** sambutan, panggilan, foto dari galeri, lalu buat/gabung lingkaran. Foto opsional; profil awal dapat disimpan sebelum menghubungkan backend. Mode contoh dapat dicoba langsung.
+- **Akun dan profil:** pendaftaran lima isian, login dengan pop-up kesalahan, sesi tersimpan, halaman Akun saya untuk mengubah nama/nickname/foto dari galeri, serta keluar akun. Mode contoh dapat dicoba tanpa akun.
 - **Desain hangat:** krem, hijau lumut, kontras yang nyaman, hierarki teks jelas, kartu lebih lega, tombol utama mudah dijangkau. Light, Dark, atau System dengan preview tampilan.
 - **Kalender mingguan sebagai awal:** tampilan bulanan tetap tersedia. Satu editor untuk konfirmasi libur dan jam opsional, pilihan cepat Sore/Malam/Larut malam, lintas tengah malam, ringkasan durasi, dan beberapa rentang per hari.
 - **Waktu tiap pengguna:** zona IANA otomatis dari OS. Jam sesi dikonversi ke zona pembaca; DST Berlin dan offset setengah jam ditangani. Tidak memakai GPS.
@@ -39,9 +41,9 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 
 ## Panduan pemakaian
 
-1. Masukkan panggilan; pilih foto dari galeri jika ingin. Foto yang dipilih dipotong persegi dan dikompres; aplikasi tidak membaca seluruh galeri.
-2. Pilih **Lanjut**. Untuk mencoba tanpa server pilih **Jelajahi contoh**; data contoh diberi label dan tidak terhubung ke teman nyata.
-3. Server Supabase sudah menjadi bawaan APK 1.3.0. Untuk keluar dari contoh, tekan **Keluar demo**. Lihat [panduan server](docs/SUPABASE.md).
+1. Ketuk **Buat akun**. Isi nama lengkap, nickname, email, password minimal delapan karakter, dan konfirmasi password. Setelah berhasil, akun langsung aktif dan aplikasi masuk; tidak ada email verifikasi.
+2. Untuk akun yang sudah ada, gunakan **Masuk**. Email/password salah menampilkan pop-up; data akun tidak ditimpa. **Jelajahi contoh** tersedia tanpa akun dan **Keluar demo** membawa kembali ke login.
+3. Ketuk avatar atau **Pengaturan → Akun saya** untuk mengubah profil dan foto galeri. Keluar akun lalu masuk dengan akun yang sama di perangkat lain untuk memulihkan data. Tidak perlu memasukkan URL server atau API key.
 4. Buat grup, buka tab **Grup**, salin kode atau link undangan, lalu teman menempelkannya pada **Gabung grup** di perangkat mereka. Mendukung tiga pengguna atau lebih dan beberapa lingkaran.
 5. Saat roster keluar, buka **Kalender**, pilih tanggal, lalu konfirmasi libur. Nyalakan **Isi jam bermain sekarang** jika jamnya diketahui, isi mulai/selesai, dan simpan sekali. Memilih tanggal saja tidak menyimpan apa pun.
 6. Tambahkan rentang lain bila perlu. Menghapus jam tetap mempertahankan libur; membatalkan libur menghapus jam yang terkait. Rentang bentrok dan waktu invalid ditolak.
@@ -51,12 +53,18 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 
 ## Tampilan setiap layar
 
-Screenshot berikut berasal dari layar React Native yang dirender di browser untuk pemeriksaan layout, memakai data contoh. Picker OS, suara, keyboard, widget, dan push background harus diuji di aplikasi native.
+<p>
+<img src="docs/preview/login-light.png" alt="Login dengan desain kaca" width="190" />
+<img src="docs/preview/register-light.png" alt="Pendaftaran akun" width="190" />
+<img src="docs/preview/login-error.png" alt="Pop-up email atau password salah" width="190" />
+<img src="docs/preview/account-light.png" alt="Pengaturan akun dan foto" width="190" />
+</p>
+
+Screenshot berikut berasal dari layar React Native yang dirender di browser untuk pemeriksaan layout, memakai data pengujian atau contoh. Picker OS, suara, keyboard, widget, dan push background harus diuji di aplikasi native.
 
 <p>
 <img src="docs/preview/loading-light.png" alt="Loading dengan logo baru" width="190" />
-<img src="docs/preview/welcome-light.png" alt="Sambutan dan profil awal" width="190" />
-<img src="docs/preview/welcome-circle.png" alt="Langkah memilih lingkaran" width="190" />
+<img src="docs/preview/login-english.png" alt="Login dalam bahasa Inggris" width="190" />
 </p>
 <p>
 <img src="docs/preview/dashboard-light.png" alt="Beranda Light" width="190" />
@@ -83,9 +91,10 @@ Screenshot berikut berasal dari layar React Native yang dirender di browser untu
 
 | Layar / dialog            | Preview                                                                                                                                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Akun | [Login](docs/preview/login-light.png), [Daftar](docs/preview/register-light.png), [Error](docs/preview/login-error.png), [Profil](docs/preview/account-light.png) |
 | Undangan dari link | [Konfirmasi bergabung](docs/preview/join-invitation.png) |
 | Loading                   | [Light](docs/preview/loading-light.png)                                                                                                                                                                                   |
-| Sambutan, panggilan, foto | [Profil awal](docs/preview/welcome-light.png), [pilih lingkaran](docs/preview/welcome-circle.png), [ubah profil](docs/preview/profile-edit.png)                                                                           |
+| Profil dan foto | [Akun saya](docs/preview/account-light.png) |
 | Beranda                   | [Light](docs/preview/dashboard-light.png), [Dark](docs/preview/dashboard-dark.png), [English](docs/preview/dashboard-english.png), [320 px](docs/preview/dashboard-small.png), [430 px](docs/preview/dashboard-large.png) |
 | Kalender                  | [Mingguan](docs/preview/calendar-week.png), [Bulanan](docs/preview/calendar.png), [320 px](docs/preview/calendar-small.png)                                                                                               |
 | Editor jadwal             | [Konfirmasi libur](docs/preview/confirm-day.png), [Jam bermain](docs/preview/playing-hours.png)                                                                                                                           |
@@ -115,7 +124,7 @@ npm start
 
 Backend resmi memakai Supabase Edge Function + PostgreSQL dan sudah terpasang. Endpoint menjadi bawaan aplikasi. Backend memeriksa anggota grup, membatasi upload foto, dan menyimpan perubahan secara atomik. [Panduan Supabase](docs/SUPABASE.md). Cloudflare Worker + D1 tetap tersedia sebagai alternatif pengembangan.
 
-Setiap instalasi memakai identitas perangkat privat. Belum ada login atau pemulihan akun lintas perangkat; menghapus data/reinstall dapat menghilangkan akses keanggotaan. Jangan menganggap nickname sebagai akun yang bisa dipulihkan.
+Supabase Auth memverifikasi login dan JWT; data aplikasi tetap melalui Edge Function yang memeriksa keanggotaan. Sesi native disimpan di SecureStore, cache/foto dipisahkan per akun. Profil dari versi lama dapat ditautkan saat login pertama pada instalasi yang masih memiliki token perangkat lama. Setelah tertaut, token perangkat saja tidak dapat membuka akun. Lihat [arsitektur dan pengaturan akun](docs/SUPABASE.md#akun-tanpa-email-verifikasi).
 
 ## Notifikasi dan zona waktu
 
@@ -129,15 +138,15 @@ Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pe
 
 ## Validasi
 
-TypeScript, ESLint dan 45 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, identitas perangkat, penyimpanan, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature sebelum publikasi. Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
+TypeScript, ESLint dan 53 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature sebelum publikasi. Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
 Pengiriman push FCM/APNs, suara native, keyboard/gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
 
 ## English quick start
 
-Jcuki helps a private circle share days off and optional playing hours across time zones. Download the Android 13+ preview above, enter a nickname/photo, and create or join a circle using the same deployed backend. Tap a calendar date, explicitly confirm your day off, optionally enter hours, then make a plan and collect friends' responses. Choose English and Light/Dark/System in Settings. Sample mode runs locally and does not connect real friends. Background activity push needs the project credentials described in [the notification guide](docs/NOTIFICATIONS.md); iPhone distribution requires Apple signing.
+Jcuki helps a private circle share days off and optional playing hours across time zones. Download the Android 13+ preview above, create an account with your full name, nickname, email and password (no verification email), then create or join a circle using the same deployed backend. Tap a calendar date, explicitly confirm your day off, optionally enter hours, then make a plan and collect friends' responses. Log in to the same account on another device to restore your data. Choose English and Light/Dark/System in Settings. Sample mode runs locally and does not connect real friends. Background activity push needs the project credentials described in [the notification guide](docs/NOTIFICATIONS.md); iPhone distribution requires Apple signing.
 
-### Tampilan pembaruan 1.3.0
+### Detail tampilan terbaru
 
 | Keluar demo | Undangan grup | Zona otomatis dan dark mode |
 | --- | --- | --- |

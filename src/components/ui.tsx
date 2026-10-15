@@ -1,3 +1,4 @@
+import { AmbientBackground, GlassSurface, GlassTarget } from "./glass";
 import React, { useEffect, useState } from "react";
 import {
   Animated,
@@ -118,20 +119,20 @@ export function Card({
 }) {
   const colors = useColors();
   return (
-    <View
+    <GlassSurface
       style={[
         {
-          backgroundColor: colors.surface,
-          borderColor: colors.line,
+          backgroundColor: colors.glass,
+          borderColor: colors.glassLine,
           borderWidth: 1,
-          borderRadius: 26,
+          borderRadius: 28,
           padding: 20,
         },
         style,
       ]}
     >
       {children}
-    </View>
+    </GlassSurface>
   );
 }
 export function Press({
@@ -476,7 +477,7 @@ export function SectionTitle({
   );
 }
 export function Header({ back = false }: { back?: boolean }) {
-  const { profile, t, colors, activityUnread } = useApp();
+  const { profile, t, colors, activityUnread, demoMode } = useApp();
   return (
     <Row between style={{ paddingHorizontal: 22, minHeight: 78 }}>
       {back ? (
@@ -510,7 +511,7 @@ export function Header({ back = false }: { back?: boolean }) {
         </View>
         <Press
           label={t("profile")}
-          onPress={() => router.push("/welcome?edit=1")}
+          onPress={() => router.push(demoMode ? "/register" : "/account")}
           style={{
             width: 48,
             height: 48,
@@ -549,7 +550,8 @@ export function Screen({
       edges={["top", "left", "right"]}
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <View
+      <AmbientBackground />
+      <GlassTarget
         style={{ flex: 1, width: "100%", maxWidth: 620, alignSelf: "center" }}
       >
         <Header back={back} />
@@ -572,7 +574,7 @@ export function Screen({
               disabled={busy}
               onPress={() =>
                 void exitDemo()
-                  .then(() => router.replace("/welcome"))
+                  .then(() => router.replace("/login"))
                   .catch(() => {})
               }
             />
@@ -592,7 +594,7 @@ export function Screen({
             contentContainerStyle={{
               paddingHorizontal: 22,
               paddingTop: 12,
-              paddingBottom: action ? 120 : 32,
+              paddingBottom: action ? 230 : back ? 40 : 132,
               gap: 24,
             }}
           >
@@ -622,15 +624,13 @@ export function Screen({
           <View
             style={{
               position: "absolute",
-              bottom: 0,
+              bottom: back ? 0 : 92 + inset.bottom,
               left: 0,
               right: 0,
-              backgroundColor: colors.bg,
+              backgroundColor: "transparent",
               paddingTop: 12,
               paddingHorizontal: 22,
               paddingBottom: 12,
-              borderTopWidth: 1,
-              borderTopColor: colors.line,
             }}
           >
             <Button
@@ -640,7 +640,7 @@ export function Screen({
             />
           </View>
         )}
-      </View>
+      </GlassTarget>
       {inset.bottom > 0 && back ? (
         <View style={{ height: inset.bottom }} />
       ) : null}

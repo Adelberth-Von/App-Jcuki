@@ -28,6 +28,14 @@ export function postgresDatabase(client) {
   }
   return {
     prepare: statement,
+    withAccountLock: (authId, job) =>
+      client.begin(async (transaction) => {
+        await transaction.unsafe(
+          "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+          [authId],
+        );
+        return job(postgresDatabase(transaction));
+      }),
     batch: (statements) =>
       client.begin(async (transaction) => {
         const results = [];

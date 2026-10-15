@@ -1,3 +1,4 @@
+import { LiquidNavigation } from "../../components/liquidNav";
 import React from "react";
 import { View } from "react-native";
 import { Tabs } from "expo-router";
@@ -16,6 +17,7 @@ export default function TabLayout() {
   ];
   return (
     <Tabs
+      tabBar={(props) => <LiquidNavigation {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,

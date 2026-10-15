@@ -1,4 +1,52 @@
 const id: Record<string, string> = {
+  authEyebrow: "RUANG UNTUK BERSAMA",
+  authRegisterTitle: "Mulai dari\nsatu akun.",
+  authLoginTitle: "Senang kamu\nkembali.",
+  authRegisterDescription:
+    "Simpan jadwalmu. Temukan waktu untuk orang-orang yang ingin kamu temui.",
+  authLoginDescription:
+    "Masuk untuk melanjutkan jadwal, grup, dan rencana bersama temanmu.",
+  authFullName: "Nama lengkap",
+  authEmail: "Alamat email",
+  authPassword: "Password",
+  authConfirmPassword: "Konfirmasi password",
+  authRegister: "Buat akun",
+  authLogin: "Masuk",
+  authWorking: "Sebentar…",
+  authHaveAccount: "Sudah punya akun?",
+  authNeedAccount: "Belum punya akun?",
+  authPasswordHint:
+    "Gunakan minimal 8 karakter. Buat password yang hanya kamu ketahui.",
+  authPrivateHint: "Jadwalmu tersimpan di akunmu.",
+  authShowPassword: "Tampilkan password",
+  authHidePassword: "Sembunyikan password",
+  authFullNameInvalid: "Isi nama lengkap, antara 2–80 karakter.",
+  authEmailInvalid: "Periksa kembali alamat emailmu.",
+  authPasswordShort: "Gunakan password minimal 8 karakter.",
+  authPasswordRequired: "Masukkan passwordmu.",
+  authPasswordMismatch: "Konfirmasi password belum sama.",
+  authCheckFields: "Periksa isian yang ditandai, lalu coba lagi.",
+  authWrongCredentials:
+    "Email atau password salah. Periksa kembali, lalu coba lagi.",
+  authEmailUnconfirmed: "Akun ini belum aktif. Hubungi pengelola aplikasi.",
+  authEmailExists: "Email ini sudah terdaftar. Gunakan halaman Masuk.",
+  authRateLimited:
+    "Terlalu banyak percobaan. Tunggu sebentar sebelum mencoba lagi.",
+  authEmailDelivery: "Pendaftaran belum tersedia. Coba lagi nanti.",
+  authLinkExpired: "Sesi ini sudah berakhir. Silakan masuk kembali.",
+  authNetworkError:
+    "Belum tersambung ke server. Periksa internetmu, lalu coba lagi.",
+  authTryAgain: "Belum berhasil. Coba lagi sebentar.",
+  authErrorTitle: "Belum bisa melanjutkan",
+  authCheckAgain: "Periksa lagi",
+  authAccount: "Akun saya",
+  authAccountDescription: "Profil yang bisa kamu bawa ke perangkat lain.",
+  authDetails: "Detail profil",
+  authSyncHint: "Perubahan disimpan ke akunmu dan terlihat oleh teman di grup.",
+  authLogout: "Keluar akun",
+  authLogoutDescription:
+    "Jadwal dan grup tetap tersimpan. Masuk lagi dengan email dan password yang sama kapan saja.",
+  authSessionExpired: "Silakan masuk kembali untuk melanjutkan.",
   exitDemo: "Keluar demo",
   connectionReadyHint:
     "Grup dan jadwal tersimpan di server. Cukup bagikan kode undangan untuk terhubung.",
@@ -209,7 +257,7 @@ const id: Record<string, string> = {
   joinFirst: "Buat atau gabung grup terlebih dahulu.",
   deleteAccount: "Identitas perangkat",
   deviceIdentity:
-    "Profil ini tersimpan pada perangkat. Menyalin kode grup bukan pemulihan akun.",
+    "Masuk dengan akun yang sama untuk memulihkan grup dan jadwal di perangkat lain.",
   week: "minggu",
   widgetEmpty: "Belum ada rencana",
   startFresh: "Mulai grup pribadi",
@@ -236,6 +284,55 @@ const id: Record<string, string> = {
   weekday6: "Sabtu",
 };
 const en: Record<string, string> = {
+  authEyebrow: "A LITTLE TIME TOGETHER",
+  authRegisterTitle: "Good times start\nwith your account.",
+  authLoginTitle: "Good to have\nyou back.",
+  authRegisterDescription:
+    "Keep your plans close. Make room for the people you want to see.",
+  authLoginDescription:
+    "Your schedules, circles, and shared plans are waiting for you.",
+  authFullName: "Full name",
+  authEmail: "Email address",
+  authPassword: "Password",
+  authConfirmPassword: "Confirm password",
+  authRegister: "Create account",
+  authLogin: "Log in",
+  authWorking: "One moment…",
+  authHaveAccount: "Already have an account?",
+  authNeedAccount: "New to Jcuki?",
+  authPasswordHint:
+    "Use at least 8 characters. Choose a password only you know.",
+  authPrivateHint: "Your time, saved to your account.",
+  authShowPassword: "Show password",
+  authHidePassword: "Hide password",
+  authFullNameInvalid: "Enter your full name, between 2 and 80 characters.",
+  authEmailInvalid: "Please check your email address.",
+  authPasswordShort: "Use a password with at least 8 characters.",
+  authPasswordRequired: "Enter your password.",
+  authPasswordMismatch: "Your passwords do not match.",
+  authCheckFields: "Check the highlighted fields and try again.",
+  authWrongCredentials:
+    "Incorrect email or password. Please check and try again.",
+  authEmailUnconfirmed:
+    "This account is not active yet. Contact the app administrator.",
+  authEmailExists: "This email is already registered. Use the login page.",
+  authRateLimited: "Too many attempts. Wait a little before trying again.",
+  authEmailDelivery: "Registration is unavailable. Please try again later.",
+  authLinkExpired: "This session has expired. Please log in again.",
+  authNetworkError:
+    "We could not reach the server. Check your connection and try again.",
+  authTryAgain: "That did not work. Please try again shortly.",
+  authErrorTitle: "Let’s check that",
+  authCheckAgain: "Try again",
+  authAccount: "My account",
+  authAccountDescription: "A profile you can take to another device.",
+  authDetails: "Profile details",
+  authSyncHint:
+    "Changes are saved to your account and reflected in your circles.",
+  authLogout: "Log out",
+  authLogoutDescription:
+    "Your schedules and circles stay saved. Log back in with the same email and password anytime.",
+  authSessionExpired: "Please log in again to continue.",
   exitDemo: "Exit demo",
   connectionReadyHint:
     "Groups and schedules are saved on the server. Share an invitation code to connect.",
@@ -446,7 +543,7 @@ const en: Record<string, string> = {
   joinFirst: "Create or join a group first.",
   deleteAccount: "Device identity",
   deviceIdentity:
-    "Your profile is stored on this device. A group code does not recover an account.",
+    "Log in to the same account to restore your circles and schedules on another device.",
   week: "week",
   widgetEmpty: "No plans just yet",
   startFresh: "Start a private group",

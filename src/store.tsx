@@ -1,3 +1,7 @@
+import { useAuth } from "./auth/provider";
+import { supabase, accountAccessToken } from "./auth/client";
+import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 import React, {
   createContext,
   useCallback,
@@ -107,7 +111,8 @@ interface AppContextValue {
   time: (instant: string | number, z?: string) => string;
   date: (instant: string | number, opts?: Intl.DateTimeFormatOptions) => string;
   updatePrefs: (v: Partial<AppPreferences>) => Promise<void>;
-  saveProfile: (nickname: string) => Promise<void>;
+  saveProfile: (nickname: string, fullName?: string) => Promise<void>;
+  logoutAccount: () => Promise<void>;
   enterDemo: (nickname?: string) => Promise<void>;
   exitDemo: () => Promise<void>;
   choosePhoto: () => Promise<void>;
@@ -147,7 +152,7 @@ interface AppContextValue {
   setWidgetEnabled: (enabled: boolean) => void;
 }
 const Context = createContext<AppContextValue | null>(null),
-  STORE = "@jcuki/app/v2";
+  LEGACY_STORE = "@jcuki/app/v2";
 const ColorsContext = createContext<Colors>(lightColors);
 export const useColors = () => useContext(ColorsContext);
 const defaultProfile: Profile = { id: "local", nickname: "", zone: "UTC" };
@@ -157,6 +162,9 @@ const environmentApiUrl =
 const errors: Record<string, string> = {
   DST_GAP: "dstGap",
   DST_AMBIGUOUS: "dstAmbiguous",
+  INVALID_FULL_NAME: "authFullNameInvalid",
+  AUTH_REQUIRED: "authSessionExpired",
+  IDENTITY_REQUIRED: "authSessionExpired",
   INVALID_DATE: "invalidInput",
   INVALID_TIME: "invalidInput",
   GROUP_NOT_FOUND: "notFound",
@@ -184,7 +192,6 @@ const errors: Record<string, string> = {
   INVALID_PAGE: "invalidInput",
   INVALID_CURSOR: "invalidInput",
   INVALID_RESPONSE: "invalidInput",
-  IDENTITY_REQUIRED: "reconnect",
   IDENTITY_INVALID: "reconnect",
   PROFILE_REQUIRED: "reconnect",
   ORIGIN_NOT_ALLOWED: "noPermission",
@@ -211,10 +218,30 @@ type SavedApp = {
   pendingPhotoUri?: string;
   reminderEvents?: ReminderEvent[];
 };
-export function AppProvider({ children }: { children: React.ReactNode }) {
+export function AppProvider({
+  children,
+  initialPreferences,
+  onPreferences,
+}: {
+  children: React.ReactNode;
+  initialPreferences?: AppPreferences;
+  onPreferences?: (value: AppPreferences) => void;
+}) {
+  const { session } = useAuth();
+  const authUser = session?.user;
+  const STORE = authUser ? "@jcuki/account/v1/" + authUser.id : LEGACY_STORE;
+  const photoScope = authUser?.id || "device";
+  const initialAccount = useRef({
+    authUser,
+    sessionToken: session?.access_token,
+    STORE,
+    photoScope,
+  });
   const [ready, setReady] = useState(false),
     [onboarded, setOnboarded] = useState(false);
-  const [prefs, setPrefs] = useState(getDefaultPreferences),
+  const [prefs, setPrefs] = useState(
+      () => initialPreferences || getDefaultPreferences(),
+    ),
     [profile, setProfile] = useState(defaultProfile);
   const [demoMode, setDemoMode] = useState(!environmentApiUrl),
     [apiUrl, setApiUrl] = useState(environmentApiUrl);
@@ -266,16 +293,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [t],
   );
   const api = useMemo<APIClient | null>(() => {
-    if (!apiUrl) return null;
+    if (!apiUrl || !authUser) return null;
     try {
       return createApiClient({
         baseUrl: apiUrl,
-        getToken: getOrCreateDeviceToken,
+        getToken: accountAccessToken,
+        getLegacyToken: getOrCreateDeviceToken,
       });
     } catch {
       return null;
     }
-  }, [apiUrl]);
+  }, [apiUrl, authUser]);
   const time = useCallback(
     (instant: string | number, selectedZone = zone) =>
       formatTime(
@@ -316,7 +344,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const requireApi = useCallback((): APIClient => {
     if (!api) {
-      setOverlay({ kind: "connection" });
+      router.push("/login");
       throw new Error("API_NOT_CONNECTED");
     }
     return api;
@@ -384,10 +412,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const initialGate = gate.current;
     let active = true;
     (async () => {
+      const { authUser, sessionToken, STORE, photoScope } =
+        initialAccount.current;
       const [preferences, id, photo, raw, token] = await Promise.all([
         loadPreferences(),
         getDeviceUserId(),
-        getProfilePhoto(),
+        getProfilePhoto(photoScope),
         AsyncStorage.getItem(STORE),
         getOrCreateDeviceToken(),
       ]);
@@ -399,7 +429,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* a corrupt cache should not prevent onboarding */
       }
-      const mode = resolveWorkspaceMode(saved, environmentApiUrl),
+      if (authUser) saved.demoMode = false;
+      else if (!saved.demoMode) saved = {};
+      const mode = {
+          ...resolveWorkspaceMode(saved, environmentApiUrl),
+          demoMode: !authUser && saved.demoMode === true,
+        },
         pending =
           saved.pendingPhotoUri && saved.pendingPhotoUri === photo
             ? photo
@@ -409,7 +444,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : pending || saved.profile?.avatarUri;
       const next: Profile = {
         id,
-        nickname: saved.profile?.nickname || "",
+        nickname:
+          saved.profile?.nickname || authUser?.user_metadata?.nickname || "",
+        ...(authUser
+          ? {
+              fullName:
+                saved.profile?.fullName ||
+                authUser.user_metadata?.full_name ||
+                "",
+            }
+          : {}),
         zone: getEffectiveTimeZone(preferences),
         ...(avatarUri ? { avatarUri } : {}),
       };
@@ -432,7 +476,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         Array.isArray(saved.reminderEvents) ? saved.reminderEvents : [],
       );
       setProfile(next);
-      setOnboarded(!!saved.onboarded);
+      setOnboarded(!!authUser || !!saved.onboarded);
       setApiUrl(mode.apiUrl);
       setDemoMode(mode.demoMode);
       setWidgetEnabled(saved.widgetEnabled !== false);
@@ -455,7 +499,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             : null,
         );
       }
-      setImageHeaders({ Authorization: "Bearer " + token });
+      setImageHeaders({ Authorization: "Bearer " + (sessionToken || token) });
       setReady(true);
       await initializeNotifications(preferences.language).catch(() => {
         /* OS permission/settings remain available in Settings */
@@ -496,6 +540,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (mounted.current) notify("error");
       });
   }, [
+    STORE,
     ready,
     onboarded,
     profile,
@@ -730,7 +775,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         );
     });
   }
-  async function saveProfile(nickname: string) {
+  async function saveProfile(nickname: string, fullName?: string) {
     nickname = nickname.trim();
     if (nickname.length < 2 || nickname.length > 24) {
       notify("invalidNickname");
@@ -739,7 +784,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await run(async () => {
       const client = demoMode || !api ? null : requireApi();
       let next = client
-        ? await client.upsertProfile({ nickname, zone })
+        ? await client.upsertProfile({
+            nickname,
+            zone,
+            ...(fullName !== undefined ? { fullName } : {}),
+          })
         : { ...profile, nickname, zone };
       if (client && pendingPhotoUri) {
         try {
@@ -762,7 +811,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
   async function commitDemo(nickname?: string) {
     setReminderEvents([]);
-    const localPhoto = await getProfilePhoto(),
+    const localPhoto = await getProfilePhoto(photoScope),
       next = {
         ...profile,
         nickname: nickname?.trim() || profile.nickname || "Terrence",
@@ -791,7 +840,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGroups([]);
       setGroupsCursor(null);
       setDemoMode(false);
-      setOnboarded(false);
+      setOnboarded(!!authUser);
       setOverlay(null);
       setOffline(false);
       setApiUrl(apiUrl || environmentApiUrl);
@@ -802,7 +851,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await run(async () => {
         const client = demoMode || !onboarded ? null : requireApi();
-        const uri = await pickProfilePhoto();
+        const uri = await pickProfilePhoto({ scope: photoScope });
         if (!uri) return;
         selected = true;
         // The picker replaces the old file. Immediately keep the new valid URI even if cloud upload fails.
@@ -843,7 +892,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const remote = demoMode ? null : await requireApi().removeAvatar();
       applyOwnProfile({ ...(remote || profile), avatarUri: undefined });
       setPendingPhotoUri(null);
-      await removeProfilePhoto();
+      await removeProfilePhoto(photoScope);
       notify("profileUpdated");
     });
   }
@@ -856,8 +905,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }
   function requireCloud(): APIClient {
-    if (demoMode) {
-      setOverlay({ kind: "connection" });
+    if (demoMode || !authUser) {
+      setOverlay(null);
+      router.push("/register");
       throw new Error("CLOUD_REQUIRED");
     }
     return requireApi();
@@ -1150,7 +1200,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await run(async () => {
       const client = createApiClient({
         baseUrl: url,
-        getToken: getOrCreateDeviceToken,
+        getToken: accountAccessToken,
+        getLegacyToken: getOrCreateDeviceToken,
       });
       let remote = await client.upsertProfile({
         nickname: profile.nickname || "Terrence",
@@ -1191,6 +1242,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOverlay(null);
     });
   }
+  async function logoutAccount() {
+    await run(async () => {
+      if (prefs.activityNotifications)
+        await api?.unregisterPushDevice().catch(() => {});
+      await Notifications.cancelAllScheduledNotificationsAsync().catch(
+        () => {},
+      );
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
+    });
+  }
+  useEffect(() => {
+    onPreferences?.(prefs);
+  }, [prefs, onPreferences]);
+  useEffect(() => {
+    if (api && session?.access_token)
+      void api
+        .avatarHeaders()
+        .then(setImageHeaders)
+        .catch(() => {});
+  }, [api, session?.access_token]);
   return (
     <Context.Provider
       value={{
@@ -1218,6 +1290,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         date,
         updatePrefs,
         saveProfile,
+        logoutAccount,
         enterDemo,
         exitDemo,
         choosePhoto,

@@ -49,7 +49,7 @@ export function DemoNotice() {
         disabled={busy}
         onPress={() =>
           void exitDemo()
-            .then(() => router.replace("/welcome"))
+            .then(() => router.replace("/login"))
             .catch(() => {})
         }
       />

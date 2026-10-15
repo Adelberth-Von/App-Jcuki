@@ -1,3 +1,4 @@
+import { useAuth } from "../../auth/provider";
 import React, { useState } from "react";
 import { Platform, View } from "react-native";
 import { router } from "expo-router";
@@ -26,6 +27,7 @@ import {
 import { DateControl } from "../../components/DateControl";
 import type { AppPreferences } from "../../services/preferences";
 export default function Settings() {
+  const { session } = useAuth();
   const {
     t,
     prefs,
@@ -36,6 +38,7 @@ export default function Settings() {
     apiUrl,
     offline,
     updatePrefs,
+    refresh,
     choosePhoto,
     deletePhoto,
     setOverlay,
@@ -129,9 +132,9 @@ export default function Settings() {
             style={{ flex: 1 }}
           />
           <Button
-            title={t("editNickname")}
+            title={t(session ? "authAccount" : "authRegister")}
             kind="secondary"
-            onPress={() => router.push("/welcome?edit=1")}
+            onPress={() => router.push(session ? "/account" : "/register")}
             style={{ flex: 1 }}
           />
         </Row>
@@ -184,7 +187,7 @@ export default function Settings() {
                           padding: 8,
                           gap: 7,
                           backgroundColor:
-                            preview === "dark" ? "#171F1A" : "#F6F3EB",
+                            preview === "dark" ? "#13221E" : "#F4F6EF",
                         }}
                       >
                         <View
@@ -423,10 +426,10 @@ export default function Settings() {
           {apiUrl ? t("connectionReadyHint") : t("apiEmpty")}
         </Txt>
         <Button
-          title={demoMode ? t("apiConnect") : t("reconnect")}
+          title={demoMode ? t("authRegister") : t("refresh")}
           kind="secondary"
           style={{ marginTop: 14 }}
-          onPress={() => setOverlay({ kind: "connection" })}
+          onPress={() => (demoMode ? router.push("/register") : void refresh())}
         />
         <Txt size={10} muted style={{ marginTop: 12 }}>
           {t("deviceIdentity")}

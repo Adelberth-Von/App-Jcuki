@@ -16,7 +16,7 @@ Configure `expo-notifications` with `sounds: ["./assets/sounds/jcuki_chime.wav"]
 
 Preferences use AsyncStorage, with validation and device-derived defaults. Use `getEffectiveTimeZone()` each time the app resumes: automatic mode follows device timezone changes. IANA `Europe/Berlin` handles both CET and CEST; fixed strings such as CET or UTC+1 should not be used to represent Berlin year-round.
 
-`getOrCreateDeviceToken()` generates 32 cryptographic random bytes encoded as 64 lowercase hexadecimal characters, matching the API bearer contract. `getDeviceUserId()` returns the complete SHA-256 hex digest of that token, matching the mobile backend's profile and membership IDs. Native identity lives in SecureStore. The browser preview uses AsyncStorage. This is a device identity, not an account with cross-device recovery. Do not log or place the token in URLs.
+`getOrCreateDeviceToken()` generates 32 cryptographic random bytes encoded as 64 lowercase hexadecimal characters, matching the API bearer contract. `getDeviceUserId()` returns the complete SHA-256 hex digest of that token, matching the mobile backend's profile and membership IDs. Native identity lives in SecureStore. The browser preview uses AsyncStorage. This remains a legacy migration proof. New accounts use Supabase Auth JWTs and chunked SecureStore sessions; the first verified login can link an unclaimed legacy profile. Once linked, the device credential alone is rejected. Account IDs scope cached state and local photos. Do not log or place the token in URLs.
 
 ## Notifications
 

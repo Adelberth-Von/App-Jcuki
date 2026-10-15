@@ -5,22 +5,23 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Platform } from "react-native";
 
 const PHOTO_STORAGE_KEY = "@jcuki/profile-photo/v1";
+const photoKey = (scope: string) => scope === "device" ? PHOTO_STORAGE_KEY : PHOTO_STORAGE_KEY + "/" + scope;
 const MAX_PHOTO_BASE64_LENGTH = 262144; // Backend decoded limit: 192 KiB.
 const profileDirectory = () => new Directory(Paths.document, "jcuki-profile");
 const profileDirectoryPrefix = () =>
   profileDirectory().uri.replace(/\/+$/, "") + "/";
 
-export async function getProfilePhoto(): Promise<string | null> {
-  const uri = await AsyncStorage.getItem(PHOTO_STORAGE_KEY);
+export async function getProfilePhoto(scope = "device"): Promise<string | null> {
+  const uri = await AsyncStorage.getItem(photoKey(scope));
   if (!uri || Platform.OS === "web") return uri;
   if (new File(uri).exists) return uri;
-  await AsyncStorage.removeItem(PHOTO_STORAGE_KEY);
+  await AsyncStorage.removeItem(photoKey(scope));
   return null;
 }
 
 /** Opens the system photo picker. Selecting one photo does not need broad gallery access. */
 export async function pickProfilePhoto(
-  options: { persist?: boolean } = {},
+  options: { persist?: boolean; scope?: string } = {},
 ): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ["images"],
@@ -73,14 +74,14 @@ export async function pickProfilePhoto(
     await new File(photo.uri).copy(destination);
     uri = destination.uri;
   }
-  if (options.persist !== false) await commitProfilePhoto(uri);
+  if (options.persist !== false) await commitProfilePhoto(uri, options.scope);
   return uri;
 }
 
 /** Commit after upload succeeds so a rejected upload leaves the earlier avatar intact. */
-export async function commitProfilePhoto(uri: string): Promise<void> {
-  const previousUri = await AsyncStorage.getItem(PHOTO_STORAGE_KEY);
-  await AsyncStorage.setItem(PHOTO_STORAGE_KEY, uri);
+export async function commitProfilePhoto(uri: string, scope = "device"): Promise<void> {
+  const previousUri = await AsyncStorage.getItem(photoKey(scope));
+  await AsyncStorage.setItem(photoKey(scope), uri);
   if (
     previousUri &&
     previousUri !== uri &&
@@ -97,8 +98,8 @@ export async function commitProfilePhoto(uri: string): Promise<void> {
 }
 
 /** Delete an abandoned staged photo, while preserving any currently committed avatar. */
-export async function discardProfilePhoto(uri: string): Promise<void> {
-  const currentUri = await AsyncStorage.getItem(PHOTO_STORAGE_KEY);
+export async function discardProfilePhoto(uri: string, scope = "device"): Promise<void> {
+  const currentUri = await AsyncStorage.getItem(photoKey(scope));
   if (
     uri === currentUri ||
     Platform.OS === "web" ||
@@ -109,9 +110,9 @@ export async function discardProfilePhoto(uri: string): Promise<void> {
   if (file.exists) file.delete();
 }
 
-export async function removeProfilePhoto(): Promise<void> {
-  const uri = await AsyncStorage.getItem(PHOTO_STORAGE_KEY);
-  await AsyncStorage.removeItem(PHOTO_STORAGE_KEY);
+export async function removeProfilePhoto(scope = "device"): Promise<void> {
+  const uri = await AsyncStorage.getItem(photoKey(scope));
+  await AsyncStorage.removeItem(photoKey(scope));
   if (
     uri &&
     Platform.OS !== "web" &&

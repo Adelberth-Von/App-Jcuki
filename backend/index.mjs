@@ -1,3 +1,4 @@
+import { registrationInput } from "./registration.mjs";
 import { activityStatements, deliverPush } from "./notifications.mjs";
 const MAX_BODY = 300000;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -225,6 +226,7 @@ function profileShape(row, origin) {
     nickname: row.nickname,
     zone: row.zone,
     updatedAt: row.updated_at,
+    ...(row.full_name !== undefined ? { fullName: row.full_name } : {}),
     ...(row.avatar_mime
       ? {
           avatarUri: `${origin}/api/avatars/${row.id}?v=${encodeURIComponent(row.updated_at)}`,
@@ -386,7 +388,8 @@ export async function handleAPI(request, env, context) {
       ? {
           "Access-Control-Allow-Origin": origin,
           Vary: "Origin",
-          "Access-Control-Allow-Headers": "Authorization, Content-Type",
+          "Access-Control-Allow-Headers":
+            "Authorization, Content-Type, X-Jcuki-Device",
           "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
         }
       : {};
@@ -398,11 +401,29 @@ export async function handleAPI(request, env, context) {
     if (url.pathname === "/health" && request.method === "GET")
       return json({ service: "JCuki API", version: 1 }, 200, cors);
     if (!env.DB || !env.RATE_LIMITER) fail("BACKEND_NOT_CONFIGURED", 503);
-    const token = request.headers
-      .get("Authorization")
-      ?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
-    if (!token) fail("IDENTITY_REQUIRED", 401);
-    const uid = await hash(token);
+    if (
+      url.pathname === "/auth/register" &&
+      request.method === "POST" &&
+      env.REGISTER_ACCOUNT
+    ) {
+      const input = registrationInput(await parseBody(request));
+      if (input.error) return json({ error: input.error }, 400, cors);
+      const result = await env.REGISTER_ACCOUNT(input, request);
+      return json(
+        result.error ? { error: result.error } : { created: true },
+        result.status || 201,
+        cors,
+      );
+    }
+    let uid;
+    if (env.AUTHENTICATE) uid = await env.AUTHENTICATE(request);
+    else {
+      const token = request.headers
+        .get("Authorization")
+        ?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
+      if (token) uid = await hash(token);
+    }
+    if (!uid) fail("IDENTITY_REQUIRED", 401);
     if (!(await env.RATE_LIMITER.limit({ key: "device:" + uid })).success)
       fail("RATE_LIMITED", 429);
     const db = env.DB,
@@ -414,12 +435,14 @@ export async function handleAPI(request, env, context) {
       : {};
     const profile = await one(
       db,
-      "SELECT id,nickname,zone,avatar_mime,updated_at FROM profiles WHERE id=?",
+      "SELECT id,nickname,zone,avatar_mime,updated_at,full_name FROM profiles WHERE id=?",
       uid,
     );
     if (path.length === 2 && path[1] === "me" && method === "PUT") {
       if (!text(body.nickname, 2, 24)) fail("INVALID_NICKNAME");
       if (!validZone(body.zone)) fail("INVALID_ZONE");
+      if (body.fullName !== undefined && !text(body.fullName, 2, 80))
+        fail("INVALID_FULL_NAME");
       // A second registration limiter reduces bursts of new device identities from one network.
       if (!profile) {
         const address = request.headers.get("CF-Connecting-IP");
@@ -460,6 +483,13 @@ export async function handleAPI(request, env, context) {
             "INSERT INTO profiles(id,nickname,zone,created_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname,zone=excluded.zone,updated_at=excluded.updated_at",
           )
           .bind(uid, body.nickname.trim(), body.zone, now, now),
+        ...(body.fullName !== undefined
+          ? [
+              db
+                .prepare("UPDATE profiles SET full_name=? WHERE id=?")
+                .bind(body.fullName.trim(), uid),
+            ]
+          : []),
         ...notices,
       ]);
       context?.waitUntil(deliverPush(env));
@@ -467,7 +497,7 @@ export async function handleAPI(request, env, context) {
         profileShape(
           await one(
             db,
-            "SELECT id,nickname,zone,avatar_mime,updated_at FROM profiles WHERE id=?",
+            "SELECT id,nickname,zone,avatar_mime,updated_at,full_name FROM profiles WHERE id=?",
             uid,
           ),
           env.PUBLIC_API_URL || url.origin,
@@ -478,7 +508,11 @@ export async function handleAPI(request, env, context) {
     }
     if (!profile) fail("PROFILE_REQUIRED", 401);
     if (path.length === 2 && path[1] === "me" && method === "GET")
-      return json(profileShape(profile, env.PUBLIC_API_URL || url.origin), 200, cors);
+      return json(
+        profileShape(profile, env.PUBLIC_API_URL || url.origin),
+        200,
+        cors,
+      );
     if (path.length === 3 && path[1] === "me" && path[2] === "push") {
       if (method === "DELETE") {
         await run(db, "UPDATE push_devices SET enabled=0 WHERE user_id=?", uid);
@@ -554,7 +588,7 @@ export async function handleAPI(request, env, context) {
         profileShape(
           await one(
             db,
-            "SELECT id,nickname,zone,avatar_mime,updated_at FROM profiles WHERE id=?",
+            "SELECT id,nickname,zone,avatar_mime,updated_at,full_name FROM profiles WHERE id=?",
             uid,
           ),
           env.PUBLIC_API_URL || url.origin,

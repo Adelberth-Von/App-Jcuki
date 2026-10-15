@@ -1,3 +1,6 @@
+import { AuthProvider, useAuth } from "../auth/provider";
+import { GlassProvider } from "../components/glass";
+import type { AppPreferences } from "../services/preferences";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View } from "react-native";
 import * as SystemUI from "expo-system-ui";
@@ -37,10 +40,12 @@ function AppShell() {
     profile,
     prefs,
     time,
+    demoMode,
     widgetEnabled,
     setOverlay,
     switchGroup,
   } = useApp();
+  const auth = useAuth();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -50,8 +55,14 @@ function AppShell() {
   });
   const [launchDone, setLaunchDone] = useState(false);
   const finishLaunch = useCallback(() => setLaunchDone(true), []);
-  const appReady = ready && !!(fontsLoaded || fontError);
+  const appReady = auth.ready && ready && !!(fontsLoaded || fontError);
   const reduced = useReducedMotion();
+  const { session, pendingInvite, setPendingInvite } = auth;
+  useEffect(() => {
+    if (!appReady || !launchDone || !session || !pendingInvite) return;
+    router.replace({ pathname: "/join", params: { code: pendingInvite } });
+    setPendingInvite(null);
+  }, [appReady, launchDone, session, pendingInvite, setPendingInvite]);
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
   }, [colors.bg]);
@@ -171,10 +182,20 @@ function AppShell() {
                 contentStyle: { backgroundColor: colors.bg },
               }}
             >
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="agenda" />
-              <Stack.Screen name="activity" />
+              <Stack.Protected guard={!!auth.session || demoMode}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="agenda" />
+                <Stack.Screen name="activity" />
+              </Stack.Protected>
+              <Stack.Protected guard={!!auth.session}>
+                <Stack.Screen name="account" />
+                <Stack.Screen name="welcome" />
+              </Stack.Protected>
+              <Stack.Protected guard={!auth.session}>
+                <Stack.Screen name="login" />
+                <Stack.Screen name="register" />
+              </Stack.Protected>
+              <Stack.Screen name="join" />
             </Stack>
             <OverlayHost />
             <Toast />
@@ -187,14 +208,35 @@ function AppShell() {
     </ThemeProvider>
   );
 }
+function AccountWorkspace() {
+  const { session } = useAuth();
+  const [preferences, setPreferences] = useState<AppPreferences | undefined>(
+    undefined,
+  );
+  const remember = useCallback(
+    (value: AppPreferences) => setPreferences(value),
+    [],
+  );
+  return (
+    <AppProvider
+      key={session?.user.id || "guest"}
+      initialPreferences={preferences}
+      onPreferences={remember}
+    >
+      <MotionProvider>
+        <GlassProvider>
+          <AppShell />
+        </GlassProvider>
+      </MotionProvider>
+    </AppProvider>
+  );
+}
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <MotionProvider>
-          <AppShell />
-        </MotionProvider>
-      </AppProvider>
+      <AuthProvider>
+        <AccountWorkspace />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

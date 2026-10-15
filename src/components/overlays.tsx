@@ -660,7 +660,7 @@ function GroupForm({ join }: { join: boolean }) {
           disabled={busy}
           onPress={() =>
             void exitDemo()
-              .then(() => router.replace("/welcome"))
+              .then(() => router.replace("/login"))
               .catch(() => {})
           }
         />

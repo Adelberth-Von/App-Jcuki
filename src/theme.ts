@@ -1,5 +1,9 @@
 export const lightColors = {
-  bg: "#F6F3EB",
+  bg: "#F4F6EF",
+  glass: "rgba(255,255,250,0.70)",
+  glassLine: "rgba(255,255,255,0.82)",
+  glassShine: "rgba(255,255,255,0.52)",
+  navActive: "rgba(215,233,210,0.80)",
   surface: "#FFFDFA",
   surfaceAlt: "#EDE9DF",
   text: "#29382E",
@@ -21,7 +25,11 @@ export const lightColors = {
   heroLine: "#5A7360",
 };
 export const darkColors: typeof lightColors = {
-  bg: "#171F1A",
+  bg: "#13221E",
+  glass: "rgba(35,55,46,0.78)",
+  glassLine: "rgba(212,237,217,0.19)",
+  glassShine: "rgba(225,247,225,0.075)",
+  navActive: "rgba(164,198,149,0.17)",
   surface: "#222D25",
   surfaceAlt: "#2C382F",
   text: "#F5F1E7",

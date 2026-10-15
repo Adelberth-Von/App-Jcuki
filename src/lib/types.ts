@@ -7,6 +7,7 @@ export interface Availability {
   status: AvailabilityStatus;
 }
 export interface Profile {
+  fullName?: string;
   id: string;
   nickname: string;
   zone: string;

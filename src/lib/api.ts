@@ -27,7 +27,9 @@ export class APIError extends Error {
 export interface APIClient {
   readonly baseUrl: string;
   getProfile(): Promise<Profile>;
-  upsertProfile(profile: Pick<Profile, "nickname" | "zone">): Promise<Profile>;
+  upsertProfile(
+    profile: Pick<Profile, "nickname" | "zone"> & { fullName?: string },
+  ): Promise<Profile>;
   listGroups(options?: PageOptions): Promise<Page<GroupSummary>>;
   createGroup(name: string): Promise<GroupSummary>;
   joinGroup(code: string): Promise<GroupSummary>;
@@ -61,10 +63,12 @@ export interface APIClient {
 export function createApiClient({
   baseUrl,
   getToken,
+  getLegacyToken,
   fetcher = fetch,
 }: {
   baseUrl: string;
   getToken: () => Promise<string>;
+  getLegacyToken?: () => Promise<string>;
   fetcher?: typeof fetch;
 }): APIClient {
   const url = new URL(baseUrl.trim());
@@ -96,7 +100,13 @@ export function createApiClient({
   };
   async function headers(): Promise<{ Authorization: string }> {
     const token = await getToken();
-    if (!/^[a-f0-9]{64}$/.test(token))
+    if (
+      !/^[a-f0-9]{64}$/.test(token) &&
+      !(
+        token.length <= 8192 &&
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)
+      )
+    )
       throw new APIError("IDENTITY_INVALID", 401);
     return { Authorization: "Bearer " + token };
   }
@@ -112,6 +122,9 @@ export function createApiClient({
         method,
         headers: {
           ...(await headers()),
+          ...(getLegacyToken
+            ? { "X-Jcuki-Device": await getLegacyToken() }
+            : {}),
           ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

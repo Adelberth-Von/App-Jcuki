@@ -27,6 +27,12 @@ export function environment() {
       "utf8",
     ),
   );
+  sqlite.exec(
+    readFileSync(
+      new URL("../../backend/migrations/0004_accounts.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   const DB = {
     prepare(sql) {
       return {

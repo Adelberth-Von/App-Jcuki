@@ -4,7 +4,7 @@ Jcuki membantu lingkaran teman dengan shift yang berubah untuk berbagi hari libu
 
 ## Alur utama
 
-1. Sambutan → isi panggilan/foto opsional → pilih buat atau gabung lingkaran melalui kode. Profil awal dapat disimpan tanpa backend; mode contoh tersedia langsung.
+1. Masuk atau daftar akun lima isian → beranda → buat/gabung lingkaran melalui kode. Akun langsung aktif tanpa email; foto opsional dapat diubah pada halaman Akun saya. Demo tersedia tanpa akun.
 2. Saat jadwal shift keluar, buka kalender mingguan dan pilih tanggal.
 3. Konfirmasi bahwa tanggal tersebut memang libur. Pemilihan tanggal sendiri tidak menyimpan konfirmasi.
 4. Pada editor yang sama, aktifkan **Isi jam bermain sekarang** atau simpan **Konfirmasi libur** saja. Tidak ada sheet konfirmasi tambahan.
@@ -27,7 +27,7 @@ Hari tanpa konfirmasi berarti **belum dikonfirmasi**, bukan otomatis sibuk. Jam 
 | Pengingat     | Kartu beranda menunjukkan konfigurasi pengingat yang tersimpan. Izin OS tetap diminta setelah tindakan pengguna.                                            |
 | Interaksi     | Efek tekan ringan, animasi mengikuti Reduce Motion, fokus input jelas, label aksesibilitas, dan target tekan minimal 48 × 48.                               |
 
-Logo baru menggambarkan tiga teman mengelilingi jam. Loading hanya berlangsung selama data/font disiapkan, kemudian fade 220 ms; Reduce Motion menonaktifkan loop. Onboarding memisahkan profil dan pilihan lingkaran, dengan koneksi server dijelaskan pada langkah yang membutuhkannya.
+Logo baru menggambarkan tiga teman mengelilingi jam. Loading hanya berlangsung selama data/font disiapkan, kemudian fade 220 ms; Reduce Motion menonaktifkan loop. Form akun memisahkan pendaftaran dari kegiatan grup; server bawaan bekerja tanpa meminta URL teknis.
 
 Lonceng membuka kabar lingkaran: filter, avatar pelaku, waktu lokal pembaca, pagination dan status belum dibaca. Push disiapkan dengan registrasi opt-in, transaksi aktivitas/outbox, retry serta receipt; kredensial proyek belum tersedia. [Panduan integrasi](NOTIFICATIONS.md).
 
@@ -42,10 +42,9 @@ Fitur berikut merupakan usulan, belum ditambahkan ke backend dalam perbaikan UI 
 - **Jadwal belum keluar.** Status eksplisit per minggu, dengan pilihan menunda pengingat. Pengguna tidak harus menebak tujuh hari sekaligus.
 - **Pengingat sesuai roster.** Waktu pengingat per pengguna; satu pengingat mingguan dan penundaan ketika roster belum diketahui. Hindari pengingat berulang yang tidak membantu.
 - **Penyusunan ulang rencana.** Push untuk kabar perubahan sudah disiapkan. Selanjutnya tawarkan alternatif waktu ketika jadwal berubah, setelah model rekomendasi disepakati.
-- **Akun yang bisa dipulihkan.** Masuk akun dan pemulihan akses antarperangkat sebelum dipakai lebih luas. Implementasi yang ada masih memakai identitas perangkat.
 - **Tautan tempat berkumpul.** Simpan tautan Discord/Meet atau aplikasi lain pada rencana; buka melalui aplikasi yang tersedia, tanpa menambahkan chat internal.
 
-Prioritas berikutnya: rekomendasi irisan waktu → status roster belum keluar → akun yang bisa dipulihkan. Jangan memasukkan seluruh ide ke versi pertama; ukur apakah anggota bisa mengisi jadwal tanpa bantuan dan menyepakati satu sesi.
+Prioritas berikutnya: rekomendasi irisan waktu → status roster belum keluar. Jangan memasukkan seluruh ide ke versi pertama; ukur apakah anggota bisa mengisi jadwal tanpa bantuan dan menyepakati satu sesi.
 
 ## Validasi dan batas pemeriksaan
 
@@ -64,3 +63,12 @@ Demo memiliki tombol **Keluar demo** pada setiap layar utama. Tombol **Buat grup
 Navigator, latar root native dan konten memakai tema yang sama untuk mengurangi potensi kilatan latar terang saat perpindahan. Formatter Intl memakai cache terbatas, ikon/teks menggunakan konteks warna terpisah dan memo, pembacaan server berjalan paralel, serta respons yang identik mempertahankan state. Polling foreground memakai refresh senyap dan demo tidak melakukan polling berkala.
 
 Pengukuran lokal 3.000 konversi tanggal turun dari sekitar 1.442 ms menjadi 113 ms pada runtime Node. Angka ini mengukur perhitungan, bukan FPS atau latensi sentuh HP. Kelancaran dan hilangnya kilatan layar perlu diverifikasi pada perangkat fisik.
+
+
+## Akun dan liquid glass · 1.4.0
+
+Pintu masuk menjadi login atau daftar, dengan demo sebagai pilihan ringan. Pendaftaran lima isian memberi label tetap, autofill, fokus berikutnya, kontrol tampil/sembunyikan password, status proses yang mencegah submit ganda, pesan inline, dan pop-up kegagalan. Akun langsung aktif tanpa alur email. Undangan mempertahankan kode saat pengguna berpindah login/daftar. Avatar dan Pengaturan membuka halaman Akun saya.
+
+Permukaan kaca memakai garis tepi terang dan gradasi statis lembut, bukan animasi latar terus-menerus. Navigasi mengambang memakai indikator spring dengan native driver dan empat target sentuh besar; tersembunyi ketika keyboard terbuka. Padding konten dan tombol bawah memberi ruang untuk navigasi. Latar native dan navigator mengikuti tema yang sama, termasuk pergantian akun.
+
+GlassView native diaktifkan hanya bila iOS mendukung kedua pemeriksaan ketersediaan. Android memakai BlurTargetView pada konten aktif dan satu BlurView navigasi dengan metode SDK31+, sedangkan kartu memakai lapisan transparan tanpa blur Android tambahan. Hero hijau, teks, input, dan status tetap memiliki kontras. Reduce Transparency mengganti kaca dengan permukaan solid, Reduce Motion mematikan gerak indikator. Kelancaran dan efek kaca native tetap membutuhkan pemeriksaan HP fisik.
