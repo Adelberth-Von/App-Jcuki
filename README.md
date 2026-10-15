@@ -18,7 +18,11 @@ APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasi
 
 Untuk memasang: buka APK di Android 13 atau lebih baru, izinkan pemasangan dari sumber browser/file manager jika diminta OS, lalu buka Jcuki. iPhone memerlukan build terpisah melalui EAS dan Apple signing; APK tidak dapat dipasang di iPhone. Lihat [panduan build](docs/BUILD.md).
 
-## Pembaruan 1.4.0
+## Pembaruan 1.5.0
+
+Formulir mengikuti kolom yang sedang diketik ketika keyboard terbuka. Foto privat dimuat dengan sesi akun dan disimpan per akun, sehingga tetap tersedia sesudah refresh/restart dan saat offline. Alur grup memakai halaman buat/gabung khusus, kode yang langsung terlihat, dan tombol berbagi. Status sinkronisasi serta email akun tampil jelas untuk login dari HP lain.
+
+### Akun dan tampilan kaca
 
 **Akun langsung aktif, tersimpan di Supabase.** Daftar dengan nama lengkap, nickname, email, password, dan konfirmasi password. Setelah berhasil, aplikasi langsung masuk tanpa mengirim email verifikasi. Login di perangkat lain memulihkan profil, grup, jadwal, dan rencana akun yang sama. Password dikelola dan di-hash oleh Supabase Auth; konfirmasi password tidak disimpan.
 
@@ -107,7 +111,7 @@ Screenshot berikut berasal dari layar React Native yang dirender di browser untu
 | Beranda                   | [Light](docs/preview/dashboard-light.png), [Dark](docs/preview/dashboard-dark.png), [English](docs/preview/dashboard-english.png), [320 px](docs/preview/dashboard-small.png), [430 px](docs/preview/dashboard-large.png) |
 | Kalender                  | [Mingguan](docs/preview/calendar-week.png), [Bulanan](docs/preview/calendar.png), [320 px](docs/preview/calendar-small.png)                                                                                               |
 | Editor jadwal             | [Konfirmasi libur](docs/preview/confirm-day.png), [Jam bermain](docs/preview/playing-hours.png)                                                                                                                           |
-| Lingkaran                 | [Daftar grup](docs/preview/groups-light.png), [Buat](docs/preview/create-group.png), [Gabung](docs/preview/join-group.png), [Undangan](docs/preview/invite.png)                                                           |
+| Lingkaran                 | [Daftar grup](docs/preview/groups-light.png), [320 px](docs/preview/groups-small.png), [Buat](docs/preview/create-group.png), [Gabung](docs/preview/join-group.png), [Undangan](docs/preview/invite.png)                                                           |
 | Agenda                    | [Daftar](docs/preview/agenda-light.png), [Buat rencana](docs/preview/create-plan.png), [Detail rencana](docs/preview/plan-detail.png)                                                                                     |
 | Aktivitas                 | [Light](docs/preview/activity-light.png), [Dark](docs/preview/activity-dark.png), [English](docs/preview/activity-english.png)                                                                                            |
 | Pengaturan                | [Light](docs/preview/settings-light.png), [Dark](docs/preview/settings-dark.png), [Notifikasi](docs/preview/settings-notifications.png)                                                                                   |
