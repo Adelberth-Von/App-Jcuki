@@ -73,6 +73,9 @@ def find(label=None, test_id=None, field=False, timeout=30, contains=False):
 def tap(label=None, test_id=None, field=False):
     node = find(label, test_id, field)
     x1, y1, x2, y2 = bounds(node)
+    fixed_labels = {'Create a group', 'Join a group', 'Create account', 'Log in', 'Home', 'Groups', 'Profile', 'Make a plan'}
+    control = test_id or (label if label in fixed_labels else 'control')
+    print('TAP', control, (x1, y1, x2, y2), flush=True)
     adb('shell', 'input', 'tap', str((x1 + x2) // 2), str((y1 + y2) // 2))
     return node
 
@@ -157,15 +160,20 @@ def hide_keyboard():
     time.sleep(.5)
 
 
-def scroll_to(label):
-    for _ in range(5):
+def scroll_to(label=None, test_id=None):
+    height = screen_height()
+    for _ in range(7):
         try:
-            return find(label=label, timeout=3)
+            node = find(label=label, test_id=test_id, timeout=2)
+            box = bounds(node)
+            # UIAutomator can expose controls underneath the floating tab bar.
+            if height * .10 <= box[1] and box[3] <= height * .80:
+                return node
         except AssertionError:
-            size = list(map(int, re.findall(r'\d+', adb('shell', 'wm', 'size'))[-2:]))
-            w, h = size
-            adb('shell', 'input', 'swipe', str(w // 2), str(int(h * .73)), str(w // 2), str(int(h * .28)), '350')
-    return find(label=label)
+            pass
+        w, h = map(int, re.findall(r'\d+', adb('shell', 'wm', 'size'))[-2:])
+        adb('shell', 'input', 'swipe', str(w // 2), str(int(h * .73)), str(w // 2), str(int(h * .28)), '350')
+    return find(label=label, test_id=test_id)
 
 
 def record_geometry(name):
@@ -175,6 +183,11 @@ def record_geometry(name):
         control = node.get('resource-id', '').split('/')[-1]
         if re.fullmatch(r'auth-(?:fullName|nickname|email|password|confirmPassword)|group-name|invite-code|plan-title|avatar-image|connect-submit|plan-submit', control):
             controls.append({'control': control, 'bounds': bounds(node), 'focused': node.get('focused') == 'true'})
+    fixed_labels = {'Create a group': 'create-group', 'Join a group': 'join-group', 'Groups': 'groups-tab', 'Home': 'home-tab', 'Calendar': 'calendar-tab', 'Find your circle.': 'connect-heading'}
+    for node in ui().iter('node'):
+        label = node.get('content-desc') or node.get('text')
+        if label in fixed_labels:
+            controls.append({'control': fixed_labels[label], 'bounds': bounds(node), 'selected': node.get('selected') == 'true'})
     try:
         top = keyboard_top()
     except AssertionError:
@@ -231,10 +244,13 @@ try:
     assert profile['nickname'] == 'Native', 'Native signup did not persist the profile'
     record_geometry('first-group')
     STEP = 'create circle keyboard'
+    record_geometry('before-create')
+    scroll_to('Create a group')
     tap('Create a group')
     type_in('group-name', 'Native QA Circle')
     assert_above_keyboard('group-name')
     hide_keyboard()
+    scroll_to(test_id='connect-submit')
     tap(test_id='connect-submit')
     find('Share invitation', timeout=40)
     groups = http('/api/groups')['items']
@@ -248,6 +264,7 @@ try:
     assert_above_keyboard('invite-code')
     record_geometry('join-keyboard')
     hide_keyboard()
+    scroll_to(test_id='connect-submit')
     tap(test_id='connect-submit')
     find('Share invitation', timeout=40)
     STEP = 'plan sheet keyboard'
@@ -258,6 +275,7 @@ try:
     assert_above_keyboard('plan-title')
     record_geometry('plan-keyboard')
     hide_keyboard()
+    scroll_to(test_id='plan-submit')
     tap(test_id='plan-submit')
     find('Native QA Hangout', timeout=40, contains=True)
     STEP = 'private photo persistence'
