@@ -21,7 +21,7 @@ CONFIG = Path('src/auth/config.ts').read_text()
 SUPABASE = os.environ.get('EXPO_PUBLIC_SUPABASE_URL') or re.search(r'https://[a-z]+\.supabase\.co', CONFIG).group()
 KEY = os.environ.get('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY') or re.search(r'sb_publishable_[^"\s]+', CONFIG).group()
 API = (os.environ.get('EXPO_PUBLIC_API_URL') or SUPABASE + '/functions/v1/jcuki').rstrip('/')
-EMAIL = 'jcuki.qa.native.' + os.environ.get('GITHUB_RUN_ID', str(int(time.time()))) + '.' + os.environ.get('ANDROID_API_LEVEL', 'local') + '@example.com'
+EMAIL = 'jcuki.qa.native.' + os.environ.get('GITHUB_RUN_ID', str(int(time.time()))) + '.' + os.environ.get('ANDROID_API_LEVEL', 'local') + '.' + secrets.token_hex(3) + '@example.com'
 PASSWORD = 'JcukiNative' + secrets.token_hex(16)
 TOKEN = None
 STEP = 'launch'
@@ -56,12 +56,13 @@ def bounds(node):
     return tuple(map(int, re.findall(r'-?\d+', node.get('bounds', ''))))
 
 
-def find(label=None, test_id=None, field=False, timeout=30):
+def find(label=None, test_id=None, field=False, timeout=30, contains=False):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         tree = ui()
         for node in tree.iter('node'):
-            matches = (test_id and node.get('resource-id', '').split('/')[-1] == test_id) or (label and label in (node.get('text'), node.get('content-desc')))
+            labels = (node.get('text', ''), node.get('content-desc', ''))
+            matches = (test_id and node.get('resource-id', '').split('/')[-1] == test_id) or (label and (any(label in value for value in labels) if contains else label in labels))
             box = bounds(node)
             if matches and len(box) == 4 and box[2] > box[0] and box[3] > box[1] and (not field or node.get('class', '').endswith('EditText')):
                 return node
@@ -101,6 +102,9 @@ def keyboard_top():
             match = re.search(pattern, chunk)
             if match:
                 x1, y1, x2, y2 = map(int, match.groups())
+                inset = re.search(r'\bmGivenContentInsets=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', chunk)
+                if inset:
+                    y1 += int(inset.group(2))
                 if y2 > y1 > 0:
                     candidates.append(y1)
                     break
@@ -113,20 +117,44 @@ def keyboard_top():
     return min(candidates)
 
 
+def screen_height():
+    return int(re.findall(r'\d+', adb('shell', 'wm', 'size'))[-1])
+
+
 def assert_above_keyboard(test_id):
-    deadline = time.monotonic() + 12
+    deadline = time.monotonic() + 20
+    height = screen_height()
+    last_top = height
+    last_bounds = ()
+    keyboard_visible = False
     while time.monotonic() < deadline:
-        node = find(test_id=test_id, field=True, timeout=8)
-        top = keyboard_top()
-        if bounds(node)[3] <= top:
+        node = find(test_id=test_id, field=True, timeout=5)
+        last_bounds = bounds(node)
+        try:
+            last_top = keyboard_top()
+            keyboard_visible = height - last_top >= height * .15
+        except AssertionError:
+            keyboard_visible = False
+        if not keyboard_visible:
+            # ADB physical-key injection can collapse the IME. A touch requests the real soft keyboard.
+            tap(test_id=test_id, field=True)
+            time.sleep(.7)
+            continue
+        if node.get('focused') == 'true' and 0 <= last_bounds[1] and last_bounds[3] <= last_top:
+            print('PASS keyboard bounds', test_id, last_bounds, 'IME top', last_top, flush=True)
             return
-        time.sleep(0.5)
-    raise AssertionError('Focused input is hidden under the keyboard: ' + test_id)
+        time.sleep(.5)
+    raise AssertionError(('Focused input is covered' if keyboard_visible else 'Soft keyboard did not open') + ': ' + test_id + ' bounds=' + str(last_bounds) + ' IME top=' + str(last_top))
 
 
 def hide_keyboard():
+    try:
+        if screen_height() - keyboard_top() < screen_height() * .15:
+            return
+    except AssertionError:
+        return
     adb('shell', 'input', 'keyevent', '4')
-    time.sleep(0.5)
+    time.sleep(.5)
 
 
 def scroll_to(label):
@@ -140,8 +168,18 @@ def scroll_to(label):
     return find(label=label)
 
 
-def screenshot(name):
-    (OUT / (name + '.png')).write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
+def record_geometry(name):
+    # Only fixed control IDs and numeric coordinates leave the emulator. No pixels or input text.
+    controls = []
+    for node in ui().iter('node'):
+        control = node.get('resource-id', '').split('/')[-1]
+        if re.fullmatch(r'auth-(?:fullName|nickname|email|password|confirmPassword)|group-name|invite-code|plan-title|avatar-image|connect-submit|plan-submit', control):
+            controls.append({'control': control, 'bounds': bounds(node), 'focused': node.get('focused') == 'true'})
+    try:
+        top = keyboard_top()
+    except AssertionError:
+        top = None
+    (OUT / (name + '.json')).write_text(json.dumps({'controls': controls, 'keyboard_top': top}))
 
 
 def launch():
@@ -182,7 +220,7 @@ try:
         assert_above_keyboard(test_id)
         adb('shell', 'input', 'text', shlex.quote(value))
     assert_above_keyboard('auth-confirmPassword')
-    screenshot('register-keyboard')
+    record_geometry('register-keyboard')
     hide_keyboard()
     scroll_to('Create account')
     tap('Create account')
@@ -191,7 +229,7 @@ try:
     TOKEN = http('/auth/v1/token?grant_type=password', 'POST', {'email': EMAIL, 'password': PASSWORD}, auth=True)['access_token']
     profile = http('/api/me')
     assert profile['nickname'] == 'Native', 'Native signup did not persist the profile'
-    screenshot('first-group')
+    record_geometry('first-group')
     STEP = 'create circle keyboard'
     tap('Create a group')
     type_in('group-name', 'Native QA Circle')
@@ -202,13 +240,13 @@ try:
     groups = http('/api/groups')['items']
     assert len(groups) == 1 and groups[0]['name'] == 'Native QA Circle', 'Circle did not persist'
     code = groups[0]['code']
-    screenshot('circle-created')
+    record_geometry('circle-created')
     STEP = 'join link keyboard'
     scroll_to('Join a group')
     tap('Join a group')
     type_in('invite-code', 'jcuki://join?code=' + code)
     assert_above_keyboard('invite-code')
-    screenshot('join-keyboard')
+    record_geometry('join-keyboard')
     hide_keyboard()
     tap(test_id='connect-submit')
     find('Share invitation', timeout=40)
@@ -218,10 +256,10 @@ try:
     tap('Make a plan')
     type_in('plan-title', 'Native QA Hangout')
     assert_above_keyboard('plan-title')
-    screenshot('plan-keyboard')
+    record_geometry('plan-keyboard')
     hide_keyboard()
     tap(test_id='plan-submit')
-    find('Native QA Hangout', timeout=40)
+    find('Native QA Hangout', timeout=40, contains=True)
     STEP = 'private photo persistence'
     import base64
     image = png()
@@ -231,7 +269,7 @@ try:
     tap('Profile')
     find('Saved to your account', timeout=40)
     find(test_id='avatar-image', timeout=35)
-    screenshot('account-avatar')
+    record_geometry('account-avatar')
     STEP = 'fresh device account recovery'
     adb('shell', 'pm', 'clear', PACKAGE)
     launch()
@@ -241,7 +279,7 @@ try:
     find(code, timeout=45)
     tap('Profile')
     find(test_id='avatar-image', timeout=35)
-    screenshot('restored-account')
+    record_geometry('restored-account')
     STEP = 'offline avatar after process restart'
     adb('shell', 'svc', 'wifi', 'disable')
     adb('shell', 'svc', 'data', 'disable')
@@ -249,20 +287,11 @@ try:
     launch()
     tap('Profile')
     find(test_id='avatar-image', timeout=30)
-    screenshot('offline-avatar')
+    record_geometry('offline-avatar')
     print('PASS native keyboard positioning, direct signup, server profile/group sync, join link, fresh-device login and private avatar restart/offline cache')
 except Exception as error:
     try:
-        screenshot('failure')
-        (OUT / 'failure-ui.xml').write_text(ET.tostring(ui(), encoding='unicode'))
-        (OUT / 'failure-keyboard.txt').write_text(adb('shell', 'dumpsys', 'window', 'windows'))
-        # Labels aid CI debugging; input values, email addresses and credentials stay private.
-        for node in ui().iter('node'):
-            if node.get('class', '').endswith('EditText') or node.get('password') == 'true':
-                continue
-            label = node.get('content-desc') or node.get('text') or node.get('resource-id')
-            if label and '@' not in label and PASSWORD not in label:
-                print('VISIBLE', label[:140], node.get('bounds'))
+        record_geometry('failure')
     except Exception:
         pass
     print('FAIL native check at:', STEP, type(error).__name__, str(error))
