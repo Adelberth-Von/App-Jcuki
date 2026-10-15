@@ -1,3 +1,5 @@
+> APK 1.3.0 memakai Supabase yang sudah terpasang. Baca [panduan Supabase](../docs/SUPABASE.md). Dokumen di bawah menjelaskan backend Cloudflare alternatif.
+
 # JCuki shared scheduling API
 
 This folder is a standalone Cloudflare Worker with a D1 database. It is independent of the older ChatGPT Sites preview. The mobile app can run its labelled local demo immediately; real multiuser scheduling requires deploying this backend and setting `EXPO_PUBLIC_API_URL` in the mobile app.

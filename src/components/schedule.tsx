@@ -25,7 +25,7 @@ export function dayText(
   return formatDate(day + "T12:00:00Z", "UTC", language, options);
 }
 export function DemoNotice() {
-  const { demoMode, t, setOverlay, colors } = useApp();
+  const { demoMode, t, exitDemo, colors, busy } = useApp();
   if (!demoMode) return null;
   return (
     <Row
@@ -46,7 +46,12 @@ export function DemoNotice() {
       <Button
         title={t("createOwn")}
         kind="text"
-        onPress={() => setOverlay({ kind: "createGroup" })}
+        disabled={busy}
+        onPress={() =>
+          void exitDemo()
+            .then(() => router.replace("/welcome"))
+            .catch(() => {})
+        }
       />
     </Row>
   );

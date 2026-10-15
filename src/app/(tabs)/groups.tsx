@@ -1,3 +1,5 @@
+import * as Clipboard from "expo-clipboard";
+import { invitationLink } from "../../lib/invitations";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
@@ -19,6 +21,7 @@ import {
 export default function Groups() {
   const {
     t,
+    notify,
     groups,
     group,
     demoMode,
@@ -58,6 +61,56 @@ export default function Groups() {
           />
         )}
       </Row>
+      {group && !demoMode && (
+        <Card
+          style={{ backgroundColor: colors.hero, borderColor: colors.hero }}
+        >
+          <Txt color={colors.heroMuted} size={12} style={{ marginBottom: 10 }}>
+            {group.name}
+          </Txt>
+          <Row>
+            <Icon name="link-outline" color={colors.onHero} />
+            <Txt color={colors.onHero} weight="semibold" size={19}>
+              {t("inviteReady")}
+            </Txt>
+          </Row>
+          <Txt color={colors.heroMuted} size={12} style={{ marginTop: 10 }}>
+            {t("inviteHint")}
+          </Txt>
+          <Txt
+            color={colors.onHero}
+            weight="bold"
+            size={25}
+            style={{ letterSpacing: 2, marginVertical: 20 }}
+          >
+            {group.code}
+          </Txt>
+          <Row style={{ gap: 8 }}>
+            <Button
+              title={t("copy")}
+              kind="secondary"
+              icon="copy-outline"
+              style={{ flex: 1 }}
+              onPress={() =>
+                void Clipboard.setStringAsync(group.code)
+                  .then(() => notify("copied"))
+                  .catch(() => notify("error"))
+              }
+            />
+            <Button
+              title={t("copyLink")}
+              kind="secondary"
+              icon="link-outline"
+              style={{ flex: 1 }}
+              onPress={() =>
+                void Clipboard.setStringAsync(invitationLink(group.code))
+                  .then(() => notify("copied"))
+                  .catch(() => notify("error"))
+              }
+            />
+          </Row>
+        </Card>
+      )}
       {p.items.length ? (
         p.items.map((g) => (
           <Press

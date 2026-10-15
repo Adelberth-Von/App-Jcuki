@@ -81,10 +81,12 @@ export function createApiClient({
     url.password ||
     url.search ||
     url.hash ||
-    (url.pathname !== "/" && url.pathname !== "")
+    !["/", "", "/functions/v1/jcuki", "/functions/v1/jcuki/"].includes(
+      url.pathname,
+    )
   )
     throw new Error("API_BASE_URL_INVALID");
-  const origin = url.origin;
+  const origin = url.origin + url.pathname.replace(/\/$/, "");
   const query = (options: PageOptions & { view?: string } = {}) => {
     const params = new URLSearchParams();
     if (options.cursor) params.set("cursor", options.cursor);

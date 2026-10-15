@@ -54,3 +54,13 @@ Pratinjau menggunakan layar React Native yang sama, dirender pada browser untuk 
 Jadwal nyata antarperangkat membutuhkan server yang dikonfigurasi. Mode contoh tetap diberi label. Push ketika aplikasi tertutup memerlukan konfigurasi EAS/FCM/APNs dan backend yang diaktifkan; tanpa itu, aplikasi hanya polling saat terbuka.
 
 Distribusi Android memakai workflow build dan publikasi release APK setelah checks berhasil, dengan link langsung di README. Verifikasi hasil native terbaru melalui GitHub Actions. iPhone membutuhkan signing Apple; screenshot browser bukan build atau uji perangkat iOS.
+
+## Pembaruan 1.3.0
+
+Zona mengikuti perangkat secara otomatis, termasuk saat kembali aktif atau pengaturan kalender OS berubah. Preferensi zona manual dari versi lama dimigrasikan ke otomatis. Pengaturan menampilkan zona yang sedang digunakan tanpa meminta izin GPS.
+
+Demo memiliki tombol **Keluar demo** pada setiap layar utama. Tombol **Buat grupmu** juga mengantar kembali ke profil nyata. Data contoh tetap terpisah dari grup server. Tab Grup menempatkan nama grup, kode, salin kode/link dan undangan pada kartu yang jelas. Link mengantar ke konfirmasi bergabung; pengguna baru melengkapi profil dahulu dan kembali ke undangan yang sama.
+
+Navigator, latar root native dan konten memakai tema yang sama untuk mengurangi potensi kilatan latar terang saat perpindahan. Formatter Intl memakai cache terbatas, ikon/teks menggunakan konteks warna terpisah dan memo, pembacaan server berjalan paralel, serta respons yang identik mempertahankan state. Polling foreground memakai refresh senyap dan demo tidak melakukan polling berkala.
+
+Pengukuran lokal 3.000 konversi tanggal turun dari sekitar 1.442 ms menjadi 113 ms pada runtime Node. Angka ini mengukur perhitungan, bukan FPS atau latensi sentuh HP. Kelancaran dan hilangnya kilatan layar perlu diverifikasi pada perangkat fisik.

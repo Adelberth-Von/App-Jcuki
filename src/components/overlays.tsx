@@ -1,3 +1,5 @@
+import { invitationCode, invitationLink } from "../lib/invitations";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -632,20 +634,38 @@ function EventForm({
 }
 
 function GroupForm({ join }: { join: boolean }) {
-  const { t, busy, createGroup, joinGroup } = useApp();
+  const { t, busy, createGroup, joinGroup, demoMode, exitDemo } = useApp();
   const [value, setValue] = useState(""),
     [error, setError] = useState("");
   async function save() {
     setError("");
     try {
       if (value.trim().length < 3) throw new Error("invalidInput");
-      if (join) await joinGroup(value);
-      else await createGroup(value);
+      if (join) {
+        const code = invitationCode(value);
+        if (!code) throw new Error("invalidInput");
+        await joinGroup(code);
+      } else await createGroup(value);
     } catch (e) {
       if (e instanceof Error && e.message === "CLOUD_REQUIRED") return;
       setError(errorText(e, t));
     }
   }
+  if (demoMode)
+    return (
+      <>
+        <Txt muted>{t("demoNotice")}</Txt>
+        <Button
+          title={t("exitDemo")}
+          disabled={busy}
+          onPress={() =>
+            void exitDemo()
+              .then(() => router.replace("/welcome"))
+              .catch(() => {})
+          }
+        />
+      </>
+    );
   return (
     <>
       <Txt size={12} muted>
@@ -653,11 +673,11 @@ function GroupForm({ join }: { join: boolean }) {
       </Txt>
       <Field
         label={t(join ? "inviteCode" : "groupName")}
-        placeholder={join ? "ABC123XY" : t("groupPlaceholder")}
+        placeholder={join ? "jcuki://join?code=…" : t("groupPlaceholder")}
         value={value}
         onChangeText={setValue}
-        maxLength={join ? 12 : 40}
-        autoCapitalize={join ? "characters" : "words"}
+        maxLength={join ? 200 : 40}
+        autoCapitalize={join ? "none" : "words"}
         autoCorrect={!join}
       />
       <FormError error={error} />
@@ -682,7 +702,9 @@ function Invite() {
     ": " +
     group.code +
     "\n" +
-    t("inviteDescription");
+    t("inviteDescription") +
+    "\n" +
+    invitationLink(group.code);
   return (
     <>
       <Txt size={12} muted>
@@ -719,6 +741,17 @@ function Invite() {
             .then(() => notify("copied"))
             .catch(() => notify("error"));
         }}
+      />
+      <Button
+        title={t("copyLink")}
+        kind="secondary"
+        icon="link-outline"
+        disabled={demoMode}
+        onPress={() =>
+          void Clipboard.setStringAsync(invitationLink(group.code))
+            .then(() => notify("copied"))
+            .catch(() => notify("error"))
+        }
       />
       <Button
         title={t("share")}

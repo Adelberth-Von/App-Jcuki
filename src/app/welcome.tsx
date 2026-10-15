@@ -36,7 +36,10 @@ export default function Welcome() {
     apiUrl,
     demoMode,
   } = useApp();
-  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const { edit, invite } = useLocalSearchParams<{
+    edit?: string;
+    invite?: string;
+  }>();
   const editing = edit === "1",
     inset = useSafeAreaInsets();
   const [nickname, setNickname] = useState(profile.nickname);
@@ -48,6 +51,10 @@ export default function Welcome() {
       await saveProfile(nickname);
       if (editing) {
         goBack();
+        return;
+      }
+      if (invite) {
+        router.replace({ pathname: "/join", params: { code: invite } });
         return;
       }
       setStep("circle");

@@ -22,10 +22,23 @@ export const ZONES: [string, string][] = [
   ["Pacific/Auckland", "Auckland"],
 ];
 const locales: Record<Language, string> = { id: "id-ID", en: "en-GB" };
+// Intl construction is expensive on Hermes; reuse a bounded set across calendar cells.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatter(locale: string, options: Intl.DateTimeFormatOptions) {
+  const key = JSON.stringify([locale, options]);
+  let value = formatters.get(key);
+  if (!value) {
+    value = new Intl.DateTimeFormat(locale, options);
+    if (formatters.size >= 128)
+      formatters.delete(formatters.keys().next().value!);
+    formatters.set(key, value);
+  }
+  return value;
+}
 const pad = (value: number) => String(value).padStart(2, "0");
 export function validZone(zone: string): boolean {
   try {
-    new Intl.DateTimeFormat("en", { timeZone: zone }).format();
+    formatter("en", { timeZone: zone }).format();
     return true;
   } catch {
     return false;
@@ -39,7 +52,7 @@ export function parts(
   instant: string | number | Date,
   zone: string,
 ): Record<string, number> {
-  const output = new Intl.DateTimeFormat("en-CA", {
+  const output = formatter("en-CA", {
     timeZone: zone,
     year: "numeric",
     month: "2-digit",
@@ -149,7 +162,7 @@ export function formatTime(
   language: Language = "id",
   hour24 = true,
 ): string {
-  return new Intl.DateTimeFormat(locales[language], {
+  return formatter(locales[language], {
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
@@ -162,7 +175,7 @@ export function formatDate(
   language: Language = "id",
   options: Intl.DateTimeFormatOptions = {},
 ): string {
-  return new Intl.DateTimeFormat(locales[language], {
+  return formatter(locales[language], {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -181,7 +194,7 @@ export function zoneAbbreviation(
   };
   if (localNames[zone]) return localNames[zone];
   const name =
-    new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" })
+    formatter("en-US", { timeZone: zone, timeZoneName: "short" })
       .formatToParts(new Date(instant))
       .find((p) => p.type === "timeZoneName")?.value || zone;
   if (zone === "Europe/Berlin")

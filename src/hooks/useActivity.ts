@@ -163,20 +163,25 @@ export function useActivity({
           )
             void notifyActivity(incoming[0], info.prefs).catch(() => {});
         }
-        setFeed((current) => ({
-          groupId,
-          items: mergeActivity(
-            current.groupId === groupId ? current.items : [],
-            page.items,
-          ),
-          cursor:
-            current.groupId === groupId && current.items.length > 20
-              ? current.cursor
-              : page.nextCursor,
-          readKey: current.groupId === groupId ? current.readKey : readKey,
-          loading: false,
-          error: false,
-        }));
+        setFeed((current) => {
+          const next = {
+            groupId,
+            items: mergeActivity(
+              current.groupId === groupId ? current.items : [],
+              page.items,
+            ),
+            cursor:
+              current.groupId === groupId && current.items.length > 20
+                ? current.cursor
+                : page.nextCursor,
+            readKey: current.groupId === groupId ? current.readKey : readKey,
+            loading: false,
+            error: false,
+          };
+          return JSON.stringify(current) === JSON.stringify(next)
+            ? current
+            : next;
+        });
         // A previous refresh can have been superseded by a write. Polling keeps
         // the selected group's schedule current even when its feed is unchanged.
         if (!demoMode) void info.onChange().catch(() => {});
@@ -193,7 +198,9 @@ export function useActivity({
     }
     reload.current = load;
     if (demoMode || api) void load();
-    const interval = setInterval(() => void load(), 30000);
+    const interval = demoMode
+      ? undefined
+      : setInterval(() => void load(), 30000);
     const foreground = AppState.addEventListener("change", (state) => {
       if (state === "active") void load();
     });

@@ -1,4 +1,11 @@
 const id: Record<string, string> = {
+  exitDemo: "Keluar demo",
+  connectionReadyHint:
+    "Grup dan jadwal tersimpan di server. Cukup bagikan kode undangan untuk terhubung.",
+  copyLink: "Salin link undangan",
+  inviteReady: "Ajak teman bergabung",
+  inviteHint:
+    "Bagikan kode atau link ini. Temanmu bisa menempelkannya saat bergabung.",
   dashboard: "Beranda",
   calendar: "Kalender",
   groups: "Grup",
@@ -137,7 +144,7 @@ const id: Record<string, string> = {
     "Pengaturan aplikasi akan terbuka. Pilih Uninstall untuk menghapus JCuki.",
   about: "Tentang",
   signature: "Develop by Terrence",
-  version: "Versi 1.2.0",
+  version: "Versi 1.3.0",
   privacy: "Hanya hari libur dan jam bermain yang dibagikan.",
   previous: "Sebelumnya",
   next: "Berikutnya",
@@ -229,6 +236,13 @@ const id: Record<string, string> = {
   weekday6: "Sabtu",
 };
 const en: Record<string, string> = {
+  exitDemo: "Exit demo",
+  connectionReadyHint:
+    "Groups and schedules are saved on the server. Share an invitation code to connect.",
+  copyLink: "Copy invitation link",
+  inviteReady: "Bring your friends along",
+  inviteHint:
+    "Share this code or link. Your friends can paste it when joining.",
   dashboard: "Home",
   calendar: "Calendar",
   groups: "Groups",
@@ -366,7 +380,7 @@ const en: Record<string, string> = {
   uninstallAndroid: "App settings will open. Choose Uninstall to remove JCuki.",
   about: "About",
   signature: "Develop by Terrence",
-  version: "Version 1.2.0",
+  version: "Version 1.3.0",
   privacy: "Only your days off and playing hours are shared.",
   previous: "Previous",
   next: "Next",

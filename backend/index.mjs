@@ -470,7 +470,7 @@ export async function handleAPI(request, env, context) {
             "SELECT id,nickname,zone,avatar_mime,updated_at FROM profiles WHERE id=?",
             uid,
           ),
-          url.origin,
+          env.PUBLIC_API_URL || url.origin,
         ),
         200,
         cors,
@@ -478,7 +478,7 @@ export async function handleAPI(request, env, context) {
     }
     if (!profile) fail("PROFILE_REQUIRED", 401);
     if (path.length === 2 && path[1] === "me" && method === "GET")
-      return json(profileShape(profile, url.origin), 200, cors);
+      return json(profileShape(profile, env.PUBLIC_API_URL || url.origin), 200, cors);
     if (path.length === 3 && path[1] === "me" && path[2] === "push") {
       if (method === "DELETE") {
         await run(db, "UPDATE push_devices SET enabled=0 WHERE user_id=?", uid);
@@ -557,7 +557,7 @@ export async function handleAPI(request, env, context) {
             "SELECT id,nickname,zone,avatar_mime,updated_at FROM profiles WHERE id=?",
             uid,
           ),
-          url.origin,
+          env.PUBLIC_API_URL || url.origin,
         ),
         200,
         cors,
@@ -695,7 +695,7 @@ export async function handleAPI(request, env, context) {
         {
           ...groupShape(await groupRow(db, groupId)),
           members: members.map((row) => ({
-            ...profileShape(row, url.origin),
+            ...profileShape(row, env.PUBLIC_API_URL || url.origin),
             slots: JSON.parse(row.slots),
             daysOff: JSON.parse(row.days_off),
             joinedAt: row.joined_at,

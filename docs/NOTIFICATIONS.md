@@ -1,6 +1,6 @@
 # Notifikasi Jcuki: pengingat lokal dan push aktivitas
 
-Versi 1.2.0 menyediakan kedua jalur. **Pengingat mingguan** dan pengingat rencana memakai jadwal lokal OS. **Aktivitas teman ketika aplikasi tertutup** dikirim backend melalui Expo Push Service → FCM/APNs. Proyek dan kredensial push belum disertakan; ikuti langkah berikut untuk mengaktifkannya. Mode contoh/browser tidak mengirim push antarperangkat.
+Versi 1.3.0 menyediakan kedua jalur. **Pengingat mingguan** dan pengingat rencana memakai jadwal lokal OS. **Aktivitas teman ketika aplikasi tertutup** dikirim backend melalui Expo Push Service → FCM/APNs. Proyek dan kredensial push belum disertakan; ikuti langkah berikut untuk mengaktifkannya. Mode contoh/browser tidak mengirim push antarperangkat.
 
 ## 1. Hubungkan proyek Expo/EAS
 
@@ -33,13 +33,33 @@ APK Android tidak berlaku untuk iPhone. Workflow simulator memeriksa kompilasi; 
 
 ## 4. Backend dan antrean
 
-Deploy backend sesuai [panduan backend](../backend/README.md). Terapkan semua migration, termasuk **`0003_activity_push.sql`**. Setelah kredensial Expo/FCM/APNs siap, ubah `PUSH_ENABLED` menjadi `"true"` di `backend/wrangler.jsonc` dan deploy. Default `"false"` menjaga integrasi yang belum dikonfigurasi tetap jelas statusnya.
+Backend Supabase sudah terpasang; lihat [panduan server](SUPABASE.md). Setelah Expo/FCM/APNs siap, atur secret **PUSH_ENABLED=true** pada Edge Function. Simpan **EXPO_PUSH_ACCESS_TOKEN** sebagai secret server jika enhanced push security EAS diaktifkan. Jangan simpan token layanan dalam variabel Expo publik.
 
-Worker mencatat perubahan dan penerima dalam transaksi yang sama dengan penyimpanan jadwal. Penerima merupakan anggota grup yang mengaktifkan notifikasi; pelaku perubahan tidak menerima push miliknya sendiri. Jenis aktivitas: anggota bergabung, jadwal berubah, rencana baru, jawaban rencana, pembatalan, serta perubahan nickname/zona/foto profil. Penulisan jadwal atau jawaban yang identik tidak menghasilkan kabar duplikat.
+Siapkan **CRON_SECRET** acak minimal 32 karakter pada Edge Function, dan simpan nilai yang sama sebagai secret **jcuki_cron_secret** di Supabase Vault. Gunakan dashboard secrets; jangan commit nilainya. Aktifkan ekstensi `pg_cron` dan `pg_net` melalui dashboard, lalu buat job Cron setiap menit dengan SQL berikut:
 
-Pengiriman dipicu setelah perubahan dan cron setiap menit. Antrean mengunci pekerjaan yang dikirim, memeriksa kembali keanggotaan/opt-out, lalu mengirim batch maksimum 100. Kesalahan sementara dijadwalkan ulang dengan backoff, maksimum delapan percobaan. Ticket yang diterima tidak dikirim ulang; receipt diperiksa setelah 15 menit, diulang bila tertunda, dan ditutup setelah 24 jam. `DeviceNotRegistered` menonaktifkan token lama. Receipt sukses berarti layanan menerima pengiriman, bukan bukti pengguna telah melihatnya. Provider dan jaringan dapat menghasilkan keterlambatan atau duplikasi ketika respons pengiriman hilang.
+```sql
+select net.http_post(
+  url := 'https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki/maintenance',
+  headers := jsonb_build_object(
+    'Content-Type', 'application/json',
+    'Authorization', 'Bearer ' || (
+      select decrypted_secret from vault.decrypted_secrets
+      where name = 'jcuki_cron_secret' limit 1
+    )
+  ),
+  body := '{}'::jsonb
+);
+```
 
-Jika mengaktifkan **enhanced push security** pada EAS, simpan token layanan hanya di Worker:
+Endpoint maintenance menolak permintaan tanpa secret yang cocok. Job ini memproses retry, receipt dan membersihkan rate-limit lama. Cron belum dipasang karena push belum memiliki kredensial. Perubahan normal juga memicu pengiriman langsung saat `PUSH_ENABLED=true`.
+
+Untuk backend Cloudflare alternatif, ikuti [panduan backend](../backend/README.md), terapkan `0003_activity_push.sql`, lalu set `PUSH_ENABLED` pada Wrangler; cron sudah didefinisikan di config Worker.
+
+Server mencatat perubahan dan penerima dalam transaksi yang sama dengan penyimpanan jadwal. Penerima merupakan anggota grup yang mengaktifkan notifikasi; pelaku perubahan tidak menerima push miliknya sendiri. Jenis aktivitas: anggota bergabung, jadwal berubah, rencana baru, jawaban rencana, pembatalan, serta perubahan nickname/zona/foto profil. Penulisan jadwal atau jawaban yang identik tidak menghasilkan kabar duplikat.
+
+Pengiriman dipicu setelah perubahan; cron yang dikonfigurasi di atas menjalankan retry setiap menit. Antrean mengunci pekerjaan yang dikirim, memeriksa kembali keanggotaan/opt-out, lalu mengirim batch maksimum 100. Kesalahan sementara dijadwalkan ulang dengan backoff, maksimum delapan percobaan. Ticket yang diterima tidak dikirim ulang; receipt diperiksa setelah 15 menit, diulang bila tertunda, dan ditutup setelah 24 jam. `DeviceNotRegistered` menonaktifkan token lama. Receipt sukses berarti layanan menerima pengiriman, bukan bukti pengguna telah melihatnya. Provider dan jaringan dapat menghasilkan keterlambatan atau duplikasi ketika respons pengiriman hilang.
+
+Untuk backend Cloudflare alternatif dengan **enhanced push security** pada EAS, simpan token layanan di Worker:
 
 ```sh
 cd backend
@@ -51,7 +71,7 @@ Jangan masukkan token layanan itu ke variabel Expo publik atau source control. T
 
 ## 5. Pengaturan pengguna
 
-Di aplikasi native: **Pengaturan → Notifikasi aktivitas teman**. Izin OS diminta hanya sesudah tombol tersebut atau pengingat dinyalakan. Status yang ditampilkan membedakan izin belum diberikan, proyek belum disiapkan, server belum aktif, siap, dan gagal tersambung. “Siap” menunjukkan registrasi berhasil dan Worker diaktifkan; tidak memeriksa keabsahan kredensial FCM/APNs secara langsung.
+Di aplikasi native: **Pengaturan → Notifikasi aktivitas teman**. Izin OS diminta hanya sesudah tombol tersebut atau pengingat dinyalakan. Status yang ditampilkan membedakan izin belum diberikan, proyek belum disiapkan, server belum aktif, siap, dan gagal tersambung. “Siap” menunjukkan registrasi berhasil dan server push diaktifkan; tidak memeriksa keabsahan kredensial FCM/APNs secara langsung.
 
 Token didaftarkan ulang saat pengaturan berubah, aplikasi kembali aktif, atau token native berganti. Registrasi berurutan memastikan opt-out terakhir mengikuti registrasi yang sedang berlangsung. Kegagalan koneksi dicoba lagi ketika aktif. Mematikan aktivitas menonaktifkan registrasi server setelah permintaan tersinkron; saat offline, pengaturan OS dapat langsung menghentikan notifikasi. Riwayat aktivitas tetap dapat dibuka dari ikon lonceng tanpa mengaktifkan notifikasi OS.
 
@@ -59,9 +79,9 @@ Tanpa push siap, grup aktif diperiksa setiap 30 detik ketika aplikasi terbuka; f
 
 ### Pengingat mingguan
 
-Aktifkan **Pengingat mingguan**, pilih hari dan jam sesuai keluarnya roster. Default: Minggu 19.00, belum aktif sampai dipilih pengguna. Zona otomatis mengikuti zona waktu OS setiap kali aplikasi kembali aktif; zona manual memakai IANA yang dipilih. Tidak membutuhkan izin GPS. Pengguna yang berpindah tempat harus memastikan pengaturan zona waktu OS benar.
+Aktifkan **Pengingat mingguan**, pilih hari dan jam sesuai keluarnya roster. Default: Minggu 19.00, belum aktif sampai dipilih pengguna. Zona otomatis mengikuti zona waktu OS setiap kali aplikasi kembali aktif. Tidak membutuhkan izin GPS. Pengguna yang berpindah tempat harus memastikan pengaturan zona waktu OS benar.
 
-iOS memakai trigger kalender; Android memakai pengulangan zona perangkat atau jadwal tanggal 12 minggu untuk zona manual. Jadwal diperbarui saat aplikasi terbuka. Rencana yang diterima juga memiliki pengingat lokal berdasarkan data terakhir disinkronkan. Push aktivitas tidak otomatis memperbarui seluruh jadwal pengingat rencana di background; buka Jcuki untuk menyinkronkan perubahan terbaru.
+iOS memakai trigger kalender; Android memakai pengulangan zona perangkat. Jadwal diperbarui saat aplikasi terbuka. Rencana yang diterima juga memiliki pengingat lokal berdasarkan data terakhir disinkronkan. Push aktivitas tidak otomatis memperbarui seluruh jadwal pengingat rencana di background; buka Jcuki untuk menyinkronkan perubahan terbaru.
 
 ### Suara Jcuki Chime
 

@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Stack, router } from "expo-router";
+import { View } from "react-native";
+import * as SystemUI from "expo-system-ui";
+import {
+  ThemeProvider,
+  DefaultTheme,
+  DarkTheme,
+  Stack,
+  router,
+} from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -44,6 +52,23 @@ function AppShell() {
   const finishLaunch = useCallback(() => setLaunchDone(true), []);
   const appReady = ready && !!(fontsLoaded || fontError);
   const reduced = useReducedMotion();
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
+  }, [colors.bg]);
+  const navigationTheme = React.useMemo(
+    () => ({
+      ...(dark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(dark ? DarkTheme : DefaultTheme).colors,
+        background: colors.bg,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.line,
+        primary: colors.accent,
+      },
+    }),
+    [dark, colors],
+  );
   const now = useMinuteClock();
   const lastWidgetPayload = useRef("");
   useEffect(() => {
@@ -134,30 +159,32 @@ function AppShell() {
   }, [appReady, launchDone, group?.id, setOverlay, switchGroup]);
 
   return (
-    <>
-      {appReady && (
-        <>
-          <StatusBar style={dark ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: reduced ? "none" : "fade",
-              contentStyle: { backgroundColor: colors.bg },
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="welcome" />
-            <Stack.Screen name="agenda" />
-            <Stack.Screen name="activity" />
-          </Stack>
-          <OverlayHost />
-          <Toast />
-        </>
-      )}
-      {!launchDone && (
-        <LaunchScreen ready={appReady} onFinished={finishLaunch} />
-      )}
-    </>
+    <ThemeProvider value={navigationTheme}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        {appReady && (
+          <>
+            <StatusBar style={dark ? "light" : "dark"} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: reduced ? "none" : "fade",
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="welcome" />
+              <Stack.Screen name="agenda" />
+              <Stack.Screen name="activity" />
+            </Stack>
+            <OverlayHost />
+            <Toast />
+          </>
+        )}
+        {!launchDone && (
+          <LaunchScreen ready={appReady} onFinished={finishLaunch} />
+        )}
+      </View>
+    </ThemeProvider>
   );
 }
 export default function RootLayout() {

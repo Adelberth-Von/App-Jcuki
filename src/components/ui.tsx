@@ -24,13 +24,13 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { goBack } from "../navigation";
-import { useApp } from "../store";
+import { useApp, useColors } from "../store";
 import { font } from "../theme";
 import type { Profile } from "../lib/types";
 import { LogoMark, LaunchScreen } from "./brand";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
-export function Icon({
+function IconView({
   name,
   size = 21,
   color,
@@ -39,7 +39,7 @@ export function Icon({
   size?: number;
   color?: ColorValue;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <Ionicons
       name={name}
@@ -49,7 +49,7 @@ export function Icon({
     />
   );
 }
-export function Txt({
+function TextView({
   children,
   size = 14,
   weight = "regular",
@@ -68,7 +68,7 @@ export function Txt({
   heading?: boolean;
   numberOfLines?: number;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   const readableSize = Math.max(12, size);
   return (
     <Text
@@ -116,7 +116,7 @@ export function Card({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <View
       style={[
@@ -219,7 +219,7 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   textColor?: string;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   const bg =
       kind === "primary"
         ? colors.accent
@@ -291,7 +291,7 @@ export function IconButton({
   soft?: boolean;
   disabled?: boolean;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <Press
       disabled={disabled}
@@ -371,7 +371,7 @@ export function Avatar({
   );
 }
 export function Brand() {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <Row style={{ gap: 9 }}>
       <LogoMark size={42} />
@@ -393,7 +393,7 @@ export function Pill({
   tone?: "accent" | "green" | "peach" | "muted";
   dot?: boolean;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   const color =
     tone === "green"
       ? colors.green
@@ -542,7 +542,7 @@ export function Screen({
   back?: boolean;
   scroll?: boolean;
 }) {
-  const { colors, refreshing, refresh } = useApp();
+  const { colors, refreshing, refresh, demoMode, exitDemo, t, busy } = useApp();
   const inset = useSafeAreaInsets();
   return (
     <SafeAreaView
@@ -553,6 +553,31 @@ export function Screen({
         style={{ flex: 1, width: "100%", maxWidth: 620, alignSelf: "center" }}
       >
         <Header back={back} />
+        {demoMode && (
+          <Row
+            between
+            style={{
+              paddingHorizontal: 22,
+              paddingVertical: 6,
+              backgroundColor: colors.accentSoft,
+            }}
+          >
+            <Txt size={12} color={colors.accent}>
+              {t("demoMode")}
+            </Txt>
+            <Button
+              title={t("exitDemo")}
+              kind="text"
+              icon="arrow-back"
+              disabled={busy}
+              onPress={() =>
+                void exitDemo()
+                  .then(() => router.replace("/welcome"))
+                  .catch(() => {})
+              }
+            />
+          </Row>
+        )}
         {scroll ? (
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -627,7 +652,7 @@ export function Field({
   style,
   ...props
 }: TextInputProps & { label: string; style?: StyleProp<TextStyle> }) {
-  const { colors } = useApp();
+  const colors = useColors();
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 7 }}>
@@ -676,7 +701,7 @@ export function SelectRow({
   onPress: () => void;
   icon?: IconName;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <Press label={label + ": " + value} onPress={onPress}>
       <Row between style={{ paddingVertical: 12, minHeight: 56 }}>
@@ -703,7 +728,7 @@ export function ToggleRow({
   value: boolean;
   onChange: (v: boolean) => void;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <Row between style={{ minHeight: 62, paddingVertical: 12 }}>
       <View style={{ flex: 1 }}>
@@ -747,7 +772,7 @@ export function ToggleRow({
   );
 }
 export function Divider() {
-  const { colors } = useApp();
+  const colors = useColors();
   return <View style={{ height: 1, backgroundColor: colors.line }} />;
 }
 export function Empty({
@@ -761,7 +786,7 @@ export function Empty({
   icon?: IconName;
   action?: { title: string; onPress: () => void };
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   return (
     <View style={{ alignItems: "center", paddingVertical: 28, gap: 8 }}>
       <View
@@ -803,7 +828,7 @@ export function Skeleton({
   height?: number;
   width?: number | `${number}%`;
 }) {
-  const { colors } = useApp();
+  const colors = useColors();
   const [value] = useState(() => new Animated.Value(1));
   const reduced = useReducedMotion();
   useEffect(() => {
@@ -945,3 +970,6 @@ export function KeyboardForm({ children }: { children: React.ReactNode }) {
     </KeyboardAvoidingView>
   );
 }
+
+export const Icon = React.memo(IconView);
+export const Txt = React.memo(TextView);

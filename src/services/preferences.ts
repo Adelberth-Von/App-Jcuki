@@ -37,9 +37,9 @@ export function isValidTimeZone(value: string): boolean {
 }
 
 export function getDeviceTimeZone(): string {
-  const detected =
-    getCalendars()[0]?.timeZone ??
-    Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const calendarZone = getCalendars()[0]?.timeZone;
+  if (calendarZone && isValidTimeZone(calendarZone)) return calendarZone;
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return detected && isValidTimeZone(detected) ? detected : "UTC";
 }
 
@@ -101,11 +101,7 @@ export function normalizePreferences(
       raw.theme === "light" || raw.theme === "dark" || raw.theme === "system"
         ? raw.theme
         : defaults.theme,
-    timeZone:
-      typeof raw.timeZone === "string" &&
-      (raw.timeZone === "auto" || isValidTimeZone(raw.timeZone))
-        ? raw.timeZone
-        : defaults.timeZone,
+    timeZone: "auto",
     timeFormat:
       raw.timeFormat === "12h" || raw.timeFormat === "24h"
         ? raw.timeFormat

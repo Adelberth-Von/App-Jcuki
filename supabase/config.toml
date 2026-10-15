@@ -1,0 +1,6 @@
+project_id = "chzyuktjcyrpbdwvdgsc"
+
+[functions.jcuki]
+# Authentication is enforced by handleAPI using a random 256-bit device credential.
+# Supabase JWT verification cannot verify this existing app identity format.
+verify_jwt = false

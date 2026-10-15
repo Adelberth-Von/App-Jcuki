@@ -270,16 +270,17 @@ export default function Settings() {
           title={t("timeRegion")}
           description={t("zoneDescription")}
         />
-        <SelectRow
-          label={t("timeZone")}
-          value={
-            prefs.timeZone === "auto"
-              ? t("autoZone")
-              : zone.split("/").at(-1)?.replace(/_/g, " ") || zone
-          }
-          icon="globe-outline"
-          onPress={() => setOverlay({ kind: "zone" })}
-        />
+        <Row>
+          <Icon name="globe-outline" color={colors.accent} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Txt weight="semibold">{t("autoZone")}</Txt>
+            <Txt muted>{zone.replace(/_/g, " ")}</Txt>
+            <Txt size={12} muted>
+              {t("zoneAutomaticHint")}
+            </Txt>
+          </View>
+          <Icon name="checkmark-circle" color={colors.accent} />
+        </Row>
         <Divider />
         <SelectRow
           label={t("timeFormat")}
@@ -419,7 +420,7 @@ export default function Settings() {
           <Icon name="cloud-outline" color={colors.muted} />
         </Row>
         <Txt size={11} muted>
-          {apiUrl ? apiUrl : t("apiEmpty")}
+          {apiUrl ? t("connectionReadyHint") : t("apiEmpty")}
         </Txt>
         <Button
           title={demoMode ? t("apiConnect") : t("reconnect")}

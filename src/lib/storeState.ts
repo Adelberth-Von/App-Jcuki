@@ -18,6 +18,18 @@ export function reconcileOwnProfile(
   previousId: string,
   profile: Profile,
 ): Group {
+  if (
+    previousId === profile.id &&
+    group.members.every(
+      (member) =>
+        member.id !== profile.id ||
+        (member.nickname === profile.nickname &&
+          member.zone === profile.zone &&
+          member.avatarUri === profile.avatarUri &&
+          member.updatedAt === profile.updatedAt),
+    )
+  )
+    return group;
   const members = group.members.map((member) =>
     member.id === previousId || member.id === profile.id
       ? { ...member, ...profile, avatarUri: profile.avatarUri }

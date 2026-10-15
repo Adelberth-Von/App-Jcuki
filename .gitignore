@@ -51,3 +51,7 @@ backend/.wrangler/
 
 # Firebase native client config is injected by GitHub/EAS, not committed.
 google-services.json
+
+# Supabase local CLI state
+/supabase/.temp/
+/supabase/.branches/

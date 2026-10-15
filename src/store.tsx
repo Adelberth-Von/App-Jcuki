@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useCalendars } from "expo-localization";
 import { AppState, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createApiClient, type APIClient, APIError } from "./lib/api";
@@ -16,6 +17,7 @@ import {
   eventState,
   formatDate,
   formatTime,
+  validZone,
   localDate,
   removeConfirmedDay,
 } from "./lib/domain";
@@ -108,6 +110,7 @@ interface AppContextValue {
   updatePrefs: (v: Partial<AppPreferences>) => Promise<void>;
   saveProfile: (nickname: string) => Promise<void>;
   enterDemo: (nickname?: string) => Promise<void>;
+  exitDemo: () => Promise<void>;
   choosePhoto: () => Promise<void>;
   deletePhoto: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -146,8 +149,12 @@ interface AppContextValue {
 }
 const Context = createContext<AppContextValue | null>(null),
   STORE = "@jcuki/app/v2";
+const ColorsContext = createContext<Colors>(lightColors);
+export const useColors = () => useContext(ColorsContext);
 const defaultProfile: Profile = { id: "local", nickname: "", zone: "UTC" };
-const environmentApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() || "";
+const environmentApiUrl =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki";
 const errors: Record<string, string> = {
   DST_GAP: "dstGap",
   DST_AMBIGUOUS: "dstAmbiguous",
@@ -226,6 +233,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [reminderEvents, setReminderEvents] = useState<ReminderEvent[]>([]);
   const [deviceZone, setDeviceZone] = useState(getDeviceTimeZone);
+  const calendars = useCalendars();
+  const calendarZone = calendars[0]?.timeZone;
   const scheme = useColorScheme(),
     timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gate = useRef(createOperationGate()),
@@ -235,7 +244,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   const persistence = useRef<Promise<void>>(Promise.resolve());
   const zone =
-      prefs.timeZone === "auto" ? deviceZone : getEffectiveTimeZone(prefs),
+      prefs.timeZone === "auto"
+        ? calendarZone && validZone(calendarZone)
+          ? calendarZone
+          : deviceZone
+        : getEffectiveTimeZone(prefs),
     dark =
       prefs.theme === "dark" || (prefs.theme === "system" && scheme === "dark"),
     colors = dark ? darkColors : lightColors;
@@ -330,10 +343,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const applyOwnProfile = useCallback(
     (next: Profile) => {
       const previousId = profile.id;
-      setProfile(next);
-      setDemoGroups((list) =>
-        list.map((item) => reconcileOwnProfile(item, previousId, next)),
+      setProfile((old) =>
+        JSON.stringify(old) === JSON.stringify(next) ? old : next,
       );
+      setDemoGroups((list) => {
+        const updated = list.map((item) =>
+          reconcileOwnProfile(item, previousId, next),
+        );
+        return updated.every((item, index) => item === list[index])
+          ? list
+          : updated;
+      });
       setGroup((current) =>
         current ? reconcileOwnProfile(current, previousId, next) : null,
       );
@@ -532,73 +552,84 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       pendingPhotoUri,
     };
   }, [demoMode, api, group, profile.id, pendingPhotoUri]);
-  const refresh = useCallback(async (): Promise<void> => {
-    const { demoMode, api, group, profileId, pendingPhotoUri } =
-      currentWorkspace.current;
-    if (demoMode || gate.current.busy) return;
-    if (!api) {
-      reportError(new Error("API_NOT_CONNECTED"));
-      return;
-    }
-    if (
-      refreshingTask.current &&
-      gate.current.isCurrent(refreshingTask.current.ticket)
-    )
-      return refreshingTask.current.promise;
-    const ticket = gate.current.startRefresh();
-    if (ticket === null) return;
-    const current = () => mounted.current && gate.current.isCurrent(ticket);
-    setRefreshing(true);
-    const task = (async () => {
-      try {
-        // Refresh is read-only: an in-flight refresh must never overwrite a newer nickname or zone edit.
-        const remote = await api.getProfile();
-        if (!current()) return;
-        const page = await api.listGroups({ limit: 20 });
-        if (!current()) return;
-        const selectedId = group?.id || page.items[0]?.id;
-        let selected: Group | null = null;
-        if (selectedId) {
-          try {
-            selected = await api.getGroup(selectedId);
-          } catch (error) {
-            if (
-              error instanceof APIError &&
-              ["NO_PERMISSION", "NOT_FOUND"].includes(error.code)
-            )
-              selected =
-                page.items[0] && page.items[0].id !== selectedId
-                  ? await api.getGroup(page.items[0].id)
-                  : null;
-            else throw error;
-          }
-        }
-        if (!current()) return;
-        const canonical = pendingPhotoUri
-          ? { ...remote, avatarUri: pendingPhotoUri }
-          : remote;
-        applyOwnProfile(canonical);
-        setGroups(page.items);
-        setGroupsCursor(page.nextCursor);
-        setGroup(
-          selected ? reconcileOwnProfile(selected, profileId, canonical) : null,
-        );
-        setOffline(false);
-      } catch (error) {
-        if (current()) reportError(error);
-      } finally {
-        if (current()) setRefreshing(false);
-        if (refreshingTask.current?.ticket === ticket)
-          refreshingTask.current = null;
+  const refresh = useCallback(
+    async (silent = false): Promise<void> => {
+      const { demoMode, api, group, profileId, pendingPhotoUri } =
+        currentWorkspace.current;
+      if (demoMode || gate.current.busy) return;
+      if (!api) {
+        reportError(new Error("API_NOT_CONNECTED"));
+        return;
       }
-    })();
-    refreshingTask.current = { ticket, promise: task };
-    return task;
-  }, [reportError, applyOwnProfile]);
+      if (
+        refreshingTask.current &&
+        gate.current.isCurrent(refreshingTask.current.ticket)
+      )
+        return refreshingTask.current.promise;
+      const ticket = gate.current.startRefresh();
+      if (ticket === null) return;
+      const current = () => mounted.current && gate.current.isCurrent(ticket);
+      if (!silent) setRefreshing(true);
+      const task = (async () => {
+        try {
+          // Refresh is read-only: an in-flight refresh must never overwrite a newer nickname or zone edit.
+          const [remote, page] = await Promise.all([
+            api.getProfile(),
+            api.listGroups({ limit: 20 }),
+          ]);
+          if (!current()) return;
+          const selectedId = group?.id || page.items[0]?.id;
+          let selected: Group | null = null;
+          if (selectedId) {
+            try {
+              selected = await api.getGroup(selectedId);
+            } catch (error) {
+              if (
+                error instanceof APIError &&
+                ["NO_PERMISSION", "NOT_FOUND"].includes(error.code)
+              )
+                selected =
+                  page.items[0] && page.items[0].id !== selectedId
+                    ? await api.getGroup(page.items[0].id)
+                    : null;
+              else throw error;
+            }
+          }
+          if (!current()) return;
+          const canonical = pendingPhotoUri
+            ? { ...remote, avatarUri: pendingPhotoUri }
+            : remote;
+          applyOwnProfile(canonical);
+          setGroups((old) =>
+            JSON.stringify(old) === JSON.stringify(page.items)
+              ? old
+              : page.items,
+          );
+          setGroupsCursor(page.nextCursor);
+          const nextGroup = selected
+            ? reconcileOwnProfile(selected, profileId, canonical)
+            : null;
+          setGroup((old) =>
+            JSON.stringify(old) === JSON.stringify(nextGroup) ? old : nextGroup,
+          );
+          setOffline(false);
+        } catch (error) {
+          if (current()) reportError(error);
+        } finally {
+          if (current()) setRefreshing(false);
+          if (refreshingTask.current?.ticket === ticket)
+            refreshingTask.current = null;
+        }
+      })();
+      refreshingTask.current = { ticket, promise: task };
+      return task;
+    },
+    [reportError, applyOwnProfile],
+  );
   useEffect(() => {
     if (ready && onboarded && !demoMode)
       void Promise.resolve()
-        .then(refresh)
+        .then(() => refresh())
         .catch(() => {});
   }, [ready, onboarded, demoMode, api, refresh]);
   useEffect(() => {
@@ -612,6 +643,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.remove();
   }, [ready, prefs, demoMode, refresh]);
 
+  const refreshSilently = useCallback(() => refresh(true), [refresh]);
   const activityState = useActivity({
     api: ready && onboarded ? api : null,
     group,
@@ -619,7 +651,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     demoMode,
     prefs,
     zone,
-    onChange: refresh,
+    onChange: refreshSilently,
   });
   useEffect(() => {
     if (
@@ -750,6 +782,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
   async function enterDemo(nickname?: string) {
     await run(() => commitDemo(nickname));
+  }
+  async function exitDemo() {
+    await run(async () => {
+      setReminderEvents([]);
+      setGroup(null);
+      setGroups([]);
+      setGroupsCursor(null);
+      setDemoMode(false);
+      setOnboarded(false);
+      setOverlay(null);
+      setOffline(false);
+      setApiUrl(apiUrl || environmentApiUrl);
+    });
   }
   async function choosePhoto() {
     let selected = false;
@@ -1173,6 +1218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatePrefs,
         saveProfile,
         enterDemo,
+        exitDemo,
         choosePhoto,
         deletePhoto,
         refresh,
@@ -1198,7 +1244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setWidgetEnabled,
       }}
     >
-      {children}
+      <ColorsContext.Provider value={colors}>{children}</ColorsContext.Provider>
     </Context.Provider>
   );
 }
