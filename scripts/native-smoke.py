@@ -92,9 +92,14 @@ def tap(label=None, test_id=None, field=False):
 
 def type_in(test_id, text):
     tap(test_id=test_id, field=True)
+    assert_above_keyboard(test_id)
     # QA fixtures contain only ASCII letters, numbers, @, dot, slash and query punctuation.
     import shlex
     adb('shell', 'input', 'text', shlex.quote(text.replace(' ', '%s')))
+    if test_id in {'auth-fullName', 'auth-email'}:
+        node = find(test_id=test_id, field=True)
+        if node.get('text') != text:
+            raise AssertionError('Fixture input was not accepted for ' + test_id)
 
 
 def keyboard_top():
@@ -193,7 +198,7 @@ def record_geometry(name):
         control = node.get('resource-id', '').split('/')[-1]
         if re.fullmatch(r'auth-(?:fullName|nickname|email|password|confirmPassword)|group-name|invite-code|plan-title|avatar-image|connect-submit|plan-submit', control):
             controls.append({'control': control, 'bounds': bounds(node), 'focused': node.get('focused') == 'true'})
-    fixed_labels = {'Create a group': 'create-group', 'Join a group': 'join-group', 'Groups': 'groups-tab', 'Home': 'home-tab', 'Calendar': 'calendar-tab', 'Find your circle.': 'connect-heading'}
+    fixed_labels = {'Check the highlighted fields and try again.': 'validation-fields', 'Enter your full name, between 2 and 80 characters.': 'validation-full-name', 'Your passwords do not match.': 'validation-password-match', 'We could not reach the server. Check your connection and try again.': 'network-error', 'Too many attempts. Wait a little before trying again.': 'rate-limited', 'Your account was created, but login didn’t finish. Go to Log in and use the same email and password.': 'account-created-login-pending', 'This email is already registered. Use the login page.': 'email-exists', 'Create a group': 'create-group', 'Join a group': 'join-group', 'Groups': 'groups-tab', 'Home': 'home-tab', 'Calendar': 'calendar-tab', 'Find your circle.': 'connect-heading'}
     for node in ui().iter('node'):
         label = node.get('content-desc') or node.get('text')
         if label in fixed_labels:
