@@ -1,4 +1,59 @@
 const id: Record<string, string> = {
+  copyLinkShort: "Salin link",
+  invalidGroupName: "Nama grup harus 2–40 karakter.",
+  lastSync: "Terakhir disinkron",
+  firstGroupWelcome: "Mulai dengan satu grup untuk kamu dan teman-temanmu.",
+  startTogether: "Mulai bareng teman.",
+  startTogetherHint:
+    "Cukup satu orang membuat grup. Yang lain tinggal bergabung memakai kode atau link.",
+  groupStepOne: "Buat grup, atau gabung grup milik teman.",
+  groupStepTwo: "Bagikan kode/link melalui aplikasi pilihanmu.",
+  groupStepThree: "Isi hari libur dan jam bermain di Kalender.",
+  joinWithCode: "Punya kode? Gabung grup",
+  connectTitle: "Temukan lingkaranmu.",
+  connectHint: "Satu tempat untuk menyepakati waktu bersama.",
+  privateGroup: "Grup pribadi · hanya lewat undangan",
+  createTitle: "Beri nama grupmu.",
+  createHint:
+    "Buat satu grup untuk kalian. Sesudah ini, kamu langsung mendapat kode undangan.",
+  joinTitle: "Sudah diajak teman?",
+  joinHint:
+    "Tempel kode atau link yang dikirim temanmu, lalu ketuk Gabung grup.",
+  inviteCodeOrLink: "Kode atau link undangan",
+  pasteInvite: "Tempel dari clipboard",
+  inviteInputHint:
+    "Kode terdiri dari 12 karakter. Link jcuki://join juga bisa langsung ditempel.",
+  inviteInvalidHint: "Periksa kode 12 karakter atau link undangannya.",
+  inviteNotFound:
+    "Undangan belum ditemukan. Minta teman menyalin ulang kode dari grupnya.",
+  createInviteHint:
+    "Kode undangan dibuat otomatis. Temanmu tidak perlu memasukkan alamat server.",
+  connectFootnote: "Grup dan jadwal tersimpan di akunmu.",
+  connectionActionFailed:
+    "Belum berhasil terhubung. Periksa internet, lalu coba lagi.",
+  calendarNeedsGroup: "Hubungkan grup dulu, lalu isi kalender bersama.",
+  demoNoAccount: "Ini masih mode contoh.",
+  demoNoAccountHint:
+    "Data contoh tidak terhubung ke teman. Buat akun untuk membuat atau bergabung dengan grup nyata.",
+  demoEntry: "Coba contoh · tanpa membuat akun",
+  syncLoading: "Memuat akunmu…",
+  syncLoadingHint: "Sedang mengambil profil dan grup yang tersimpan.",
+  syncFailed: "Belum tersinkron",
+  syncFailedHint:
+    "Data akun belum berhasil dimuat. Periksa internet, lalu coba lagi.",
+  syncReady: "Tersimpan di akunmu",
+  authUseThisEmail: "Gunakan email ini saat masuk di perangkat lain.",
+  authCreatedLoginFailed:
+    "Akun sudah dibuat, tetapi belum berhasil masuk. Lanjutkan ke halaman Masuk dengan email dan password yang sama.",
+  authGoToLogin: "Lanjut ke Masuk",
+  circleReady: "Grupmu sudah siap.",
+  circleNextHint:
+    "Bagikan undangan ini. Temanmu memilih Gabung grup dan menempelkannya.",
+  shareInvitation: "Bagikan undangan",
+  fillMyCalendar: "Isi kalender saya",
+  addAnotherGroup: "Buat grup lain",
+  groupActiveHint: "Ketuk grup untuk membuka jadwalnya.",
+  groupFull: "Grup ini sudah penuh.",
   authEyebrow: "RUANG UNTUK BERSAMA",
   authRegisterTitle: "Mulai dari\nsatu akun.",
   authLoginTitle: "Senang kamu\nkembali.",
@@ -284,6 +339,60 @@ const id: Record<string, string> = {
   weekday6: "Sabtu",
 };
 const en: Record<string, string> = {
+  copyLinkShort: "Copy link",
+  invalidGroupName: "Use 2–40 characters for the circle name.",
+  lastSync: "Last synced",
+  firstGroupWelcome: "Start with one private circle for you and your friends.",
+  startTogether: "Make room for your people.",
+  startTogetherHint:
+    "Only one person needs to create a circle. Everyone else joins with its code or link.",
+  groupStepOne: "Create a circle, or join your friend’s.",
+  groupStepTwo: "Share the code/link through your favorite app.",
+  groupStepThree: "Add days off and playing hours in Calendar.",
+  joinWithCode: "Have a code? Join a circle",
+  connectTitle: "Find your circle.",
+  connectHint: "One shared space to find time together.",
+  privateGroup: "Private circle · invitation only",
+  createTitle: "Give your circle a name.",
+  createHint:
+    "Create one circle for your friends. You’ll get an invitation code right away.",
+  joinTitle: "Got an invitation?",
+  joinHint: "Paste your friend’s code or link, then tap Join circle.",
+  inviteCodeOrLink: "Invitation code or link",
+  pasteInvite: "Paste from clipboard",
+  inviteInputHint:
+    "Codes have 12 characters. You can also paste a jcuki://join link.",
+  inviteInvalidHint: "Check the 12-character code or invitation link.",
+  inviteNotFound:
+    "Invitation not found. Ask your friend to copy the code from their circle again.",
+  createInviteHint:
+    "An invitation code is created automatically. Friends don’t need a server address.",
+  connectFootnote: "Your circles and schedules stay with your account.",
+  connectionActionFailed:
+    "Couldn’t connect. Check your internet and try again.",
+  calendarNeedsGroup: "Connect with your circle, then fill in your calendar.",
+  demoNoAccount: "You’re in sample mode.",
+  demoNoAccountHint:
+    "Sample data doesn’t connect to friends. Create an account to create or join a real circle.",
+  demoEntry: "Try samples · no account created",
+  syncLoading: "Loading your account…",
+  syncLoadingHint: "Fetching your saved profile and circles.",
+  syncFailed: "Not synced yet",
+  syncFailedHint:
+    "Your account couldn’t load. Check your internet, then try again.",
+  syncReady: "Saved to your account",
+  authUseThisEmail: "Use this email when logging in on another device.",
+  authCreatedLoginFailed:
+    "Your account was created, but login didn’t finish. Go to Log in and use the same email and password.",
+  authGoToLogin: "Continue to login",
+  circleReady: "Your circle is ready.",
+  circleNextHint:
+    "Share this invitation. Your friends choose Join a group and paste it.",
+  shareInvitation: "Share invitation",
+  fillMyCalendar: "Fill my calendar",
+  addAnotherGroup: "Create another circle",
+  groupActiveHint: "Tap a circle to open its schedule.",
+  groupFull: "This circle is full.",
   authEyebrow: "A LITTLE TIME TOGETHER",
   authRegisterTitle: "Good times start\nwith your account.",
   authLoginTitle: "Good to have\nyou back.",

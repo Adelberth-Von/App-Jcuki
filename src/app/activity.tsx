@@ -16,6 +16,7 @@ import {
   Txt,
 } from "../components/ui";
 import type { Activity, ActivityKind } from "../lib/types";
+import { GroupStart } from "../components/groupStart";
 const icons: Record<ActivityKind, React.ComponentProps<typeof Icon>["name"]> = {
   member_joined: "people-outline",
   schedule_updated: "calendar-outline",
@@ -62,6 +63,12 @@ export default function ActivityScreen() {
     if (item.eventId && group?.events.some((e) => e.id === item.eventId))
       setOverlay({ kind: "details", id: item.eventId });
   }
+  if (!group)
+    return (
+      <Screen back title={t("activityTitle")}>
+        <GroupStart />
+      </Screen>
+    );
   return (
     <Screen
       back

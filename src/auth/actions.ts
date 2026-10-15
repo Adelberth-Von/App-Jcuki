@@ -24,7 +24,15 @@ export async function registerAccount(fields: AccountFields) {
       code: body.error,
       status: response.status,
     });
-  await loginAccount(fields.email, fields.password);
+  try {
+    await loginAccount(fields.email, fields.password);
+  } catch (cause) {
+    throw Object.assign(new Error("Account created; login did not finish"), {
+      code: "ACCOUNT_CREATED_LOGIN_FAILED",
+      status: 409,
+      cause,
+    });
+  }
 }
 export async function loginAccount(email: string, password: string) {
   const { error } = await supabase.auth.signInWithPassword({

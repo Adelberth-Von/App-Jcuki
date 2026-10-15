@@ -67,7 +67,7 @@ export function createApiClient({
   fetcher = fetch,
 }: {
   baseUrl: string;
-  getToken: () => Promise<string>;
+  getToken: (refresh?: boolean) => Promise<string>;
   getLegacyToken?: () => Promise<string>;
   fetcher?: typeof fetch;
 }): APIClient {
@@ -98,8 +98,13 @@ export function createApiClient({
     if (options.view) params.set("view", options.view);
     return params.size ? "?" + params.toString() : "";
   };
-  async function headers(): Promise<{ Authorization: string }> {
-    const token = await getToken();
+  async function headers(refresh = false): Promise<{ Authorization: string }> {
+    let token: string;
+    try {
+      token = await getToken(refresh);
+    } catch {
+      throw new APIError("AUTH_REQUIRED", 401);
+    }
     if (
       !/^[a-f0-9]{64}$/.test(token) &&
       !(
@@ -118,18 +123,23 @@ export function createApiClient({
     const controller = new AbortController(),
       timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetcher(origin + "/api" + path, {
-        method,
-        headers: {
-          ...(await headers()),
-          ...(getLegacyToken
-            ? { "X-Jcuki-Device": await getLegacyToken() }
-            : {}),
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        signal: controller.signal,
-      });
+      const send = async (refresh: boolean) =>
+        fetcher(origin + "/api" + path, {
+          method,
+          headers: {
+            ...(await headers(refresh)),
+            ...(getLegacyToken
+              ? { "X-Jcuki-Device": await getLegacyToken() }
+              : {}),
+            ...(body !== undefined
+              ? { "Content-Type": "application/json" }
+              : {}),
+          },
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          signal: controller.signal,
+        });
+      let response = await send(false);
+      if (response.status === 401) response = await send(true);
       const data = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new APIError(

@@ -4,7 +4,9 @@ import type { Group, Profile } from "./types";
 export function resolveWorkspaceMode(
   saved: { apiUrl?: unknown; demoMode?: unknown },
   environmentUrl: string,
+  authenticated = false,
 ): { apiUrl: string; demoMode: boolean } {
+  if (authenticated) return { apiUrl: environmentUrl, demoMode: false };
   const apiUrl =
     typeof saved.apiUrl === "string" ? saved.apiUrl : environmentUrl;
   return {

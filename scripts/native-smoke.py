@@ -1,0 +1,275 @@
+"""Exercise the installable APK on an isolated Android emulator, using one labelled QA account.
+No service-role credentials, existing account changes, or credential logging.
+"""
+import json
+import os
+import re
+import secrets
+import struct
+import subprocess
+import time
+import urllib.error
+import urllib.request
+import xml.etree.ElementTree as ET
+import zlib
+from pathlib import Path
+
+PACKAGE = 'com.terrence.jcuki'
+OUT = Path('native-results')
+OUT.mkdir(exist_ok=True)
+CONFIG = Path('src/auth/config.ts').read_text()
+SUPABASE = os.environ.get('EXPO_PUBLIC_SUPABASE_URL') or re.search(r'https://[a-z]+\.supabase\.co', CONFIG).group()
+KEY = os.environ.get('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY') or re.search(r'sb_publishable_[^"\s]+', CONFIG).group()
+API = (os.environ.get('EXPO_PUBLIC_API_URL') or SUPABASE + '/functions/v1/jcuki').rstrip('/')
+EMAIL = 'jcuki.qa.native.' + os.environ.get('GITHUB_RUN_ID', str(int(time.time()))) + '.' + os.environ.get('ANDROID_API_LEVEL', 'local') + '@example.com'
+PASSWORD = 'JcukiNative' + secrets.token_hex(16)
+TOKEN = None
+STEP = 'launch'
+
+
+def adb(*args, binary=False):
+    result = subprocess.run(['adb', *args], check=True, capture_output=True, timeout=40)
+    return result.stdout if binary else result.stdout.decode(errors='replace')
+
+
+def http(path, method='GET', body=None, auth=False):
+    url = SUPABASE + path if auth else API + path
+    headers = {'Content-Type': 'application/json', 'apikey': KEY}
+    if not auth and TOKEN:
+        headers['Authorization'] = 'Bearer ' + TOKEN
+    req = urllib.request.Request(url, method=method, headers=headers, data=json.dumps(body).encode() if body is not None else None)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        # Error codes only; never log the submitted credentials or returned tokens.
+        value = json.loads(error.read() or '{}')
+        raise AssertionError('API check failed: ' + str(error.code) + ' ' + str(value.get('error_code') or value.get('error') or 'request_failed')) from None
+
+
+def ui():
+    adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/jcuki-ui.xml')
+    return ET.fromstring(adb('exec-out', 'cat', '/sdcard/jcuki-ui.xml'))
+
+
+def bounds(node):
+    return tuple(map(int, re.findall(r'-?\d+', node.get('bounds', ''))))
+
+
+def find(label=None, test_id=None, field=False, timeout=30):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        tree = ui()
+        for node in tree.iter('node'):
+            matches = (test_id and node.get('resource-id', '').split('/')[-1] == test_id) or (label and label in (node.get('text'), node.get('content-desc')))
+            box = bounds(node)
+            if matches and len(box) == 4 and box[2] > box[0] and box[3] > box[1] and (not field or node.get('class', '').endswith('EditText')):
+                return node
+        time.sleep(0.4)
+    raise AssertionError('Expected control was not visible: ' + str(test_id or label))
+
+
+def tap(label=None, test_id=None, field=False):
+    node = find(label, test_id, field)
+    x1, y1, x2, y2 = bounds(node)
+    adb('shell', 'input', 'tap', str((x1 + x2) // 2), str((y1 + y2) // 2))
+    return node
+
+
+def type_in(test_id, text):
+    tap(test_id=test_id, field=True)
+    # QA fixtures contain only ASCII letters, numbers, @, dot, slash and query punctuation.
+    import shlex
+    adb('shell', 'input', 'text', shlex.quote(text.replace(' ', '%s')))
+
+
+def keyboard_top():
+    dump = adb('shell', 'dumpsys', 'window', 'windows')
+    insets = []
+    for match in re.finditer(r'(?:mType|type)=ime\b[^\n]*(?:mFrame|frame)=\[(\d+),(\d+)\]\[(\d+),(\d+)\][^\n]*(?:mVisible|visible)=true', dump):
+        _, y1, _, y2 = map(int, match.groups())
+        if y2 > y1 > 0:
+            insets.append(y1)
+    if insets:
+        return min(insets)
+    chunks = re.split(r'(?=\s*Window #\d+ Window\{)', dump)
+    candidates = []
+    for chunk in chunks:
+        if not re.search(r'^\s*Window #\d+ Window\{[^\n]*\bInputMethod\b', chunk):
+            continue
+        for pattern in (r'\bframe=\[(\d+),(\d+)\]\[(\d+),(\d+)\]', r'mFrame=\[(\d+),(\d+)\]\[(\d+),(\d+)\]'):
+            match = re.search(pattern, chunk)
+            if match:
+                x1, y1, x2, y2 = map(int, match.groups())
+                if y2 > y1 > 0:
+                    candidates.append(y1)
+                    break
+    if not candidates:
+        # Some Android versions expose IME geometry through WindowInsets only.
+        for match in re.finditer(r'type=ime[^\n]*frame=\[(\d+),(\d+)\]\[(\d+),(\d+)\][^\n]*visible=true', dump):
+            candidates.append(int(match.group(2)))
+    if not candidates:
+        raise AssertionError('Could not verify visible keyboard geometry')
+    return min(candidates)
+
+
+def assert_above_keyboard(test_id):
+    deadline = time.monotonic() + 12
+    while time.monotonic() < deadline:
+        node = find(test_id=test_id, field=True, timeout=8)
+        top = keyboard_top()
+        if bounds(node)[3] <= top:
+            return
+        time.sleep(0.5)
+    raise AssertionError('Focused input is hidden under the keyboard: ' + test_id)
+
+
+def hide_keyboard():
+    adb('shell', 'input', 'keyevent', '4')
+    time.sleep(0.5)
+
+
+def scroll_to(label):
+    for _ in range(5):
+        try:
+            return find(label=label, timeout=3)
+        except AssertionError:
+            size = list(map(int, re.findall(r'\d+', adb('shell', 'wm', 'size'))[-2:]))
+            w, h = size
+            adb('shell', 'input', 'swipe', str(w // 2), str(int(h * .73)), str(w // 2), str(int(h * .28)), '350')
+    return find(label=label)
+
+
+def screenshot(name):
+    (OUT / (name + '.png')).write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
+
+
+def launch():
+    adb('shell', 'monkey', '-p', PACKAGE, '-c', 'android.intent.category.LAUNCHER', '1')
+
+
+def png():
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    pixels = b''.join(b'\0' + bytes([66, 102, 75]) * 128 for _ in range(128))
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 128, 128, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(pixels)) + chunk(b'IEND', b'')
+
+
+def login():
+    type_in('auth-email', EMAIL)
+    adb('shell', 'input', 'keyevent', '66')
+    find(test_id='auth-password', field=True)
+    assert_above_keyboard('auth-password')
+    import shlex
+    adb('shell', 'input', 'text', shlex.quote(PASSWORD))
+    hide_keyboard()
+    scroll_to('Log in')
+    tap('Log in')
+    find('Saved to your account', timeout=40) if STEP == 'account' else find('Home', timeout=40)
+
+
+try:
+    launch()
+    find('Log in', timeout=60)
+    scroll_to('Create account')
+    tap('Create account')
+    STEP = 'register keyboard'
+    type_in('auth-fullName', 'QA Android')
+    import shlex
+    for test_id, value in [('auth-nickname', 'Native'), ('auth-email', EMAIL), ('auth-password', PASSWORD), ('auth-confirmPassword', PASSWORD)]:
+        adb('shell', 'input', 'keyevent', '66')
+        find(test_id=test_id, field=True)
+        assert_above_keyboard(test_id)
+        adb('shell', 'input', 'text', shlex.quote(value))
+    assert_above_keyboard('auth-confirmPassword')
+    screenshot('register-keyboard')
+    hide_keyboard()
+    scroll_to('Create account')
+    tap('Create account')
+    STEP = 'server account verification'
+    find('Create a group', timeout=50)
+    TOKEN = http('/auth/v1/token?grant_type=password', 'POST', {'email': EMAIL, 'password': PASSWORD}, auth=True)['access_token']
+    profile = http('/api/me')
+    assert profile['nickname'] == 'Native', 'Native signup did not persist the profile'
+    screenshot('first-group')
+    STEP = 'create circle keyboard'
+    tap('Create a group')
+    type_in('group-name', 'Native QA Circle')
+    assert_above_keyboard('group-name')
+    hide_keyboard()
+    tap(test_id='connect-submit')
+    find('Share invitation', timeout=40)
+    groups = http('/api/groups')['items']
+    assert len(groups) == 1 and groups[0]['name'] == 'Native QA Circle', 'Circle did not persist'
+    code = groups[0]['code']
+    screenshot('circle-created')
+    STEP = 'join link keyboard'
+    scroll_to('Join a group')
+    tap('Join a group')
+    type_in('invite-code', 'jcuki://join?code=' + code)
+    assert_above_keyboard('invite-code')
+    screenshot('join-keyboard')
+    hide_keyboard()
+    tap(test_id='connect-submit')
+    find('Share invitation', timeout=40)
+    STEP = 'plan sheet keyboard'
+    tap('Home')
+    scroll_to('Make a plan')
+    tap('Make a plan')
+    type_in('plan-title', 'Native QA Hangout')
+    assert_above_keyboard('plan-title')
+    screenshot('plan-keyboard')
+    hide_keyboard()
+    tap(test_id='plan-submit')
+    find('Native QA Hangout', timeout=40)
+    STEP = 'private photo persistence'
+    import base64
+    image = png()
+    photo = http('/api/me/avatar', 'PUT', {'base64': base64.b64encode(image).decode(), 'mime': 'image/png'})
+    adb('shell', 'am', 'force-stop', PACKAGE)
+    launch()
+    tap('Profile')
+    find('Saved to your account', timeout=40)
+    find(test_id='avatar-image', timeout=35)
+    screenshot('account-avatar')
+    STEP = 'fresh device account recovery'
+    adb('shell', 'pm', 'clear', PACKAGE)
+    launch()
+    find('Log in', timeout=60)
+    login()
+    tap('Groups')
+    find(code, timeout=45)
+    tap('Profile')
+    find(test_id='avatar-image', timeout=35)
+    screenshot('restored-account')
+    STEP = 'offline avatar after process restart'
+    adb('shell', 'svc', 'wifi', 'disable')
+    adb('shell', 'svc', 'data', 'disable')
+    adb('shell', 'am', 'force-stop', PACKAGE)
+    launch()
+    tap('Profile')
+    find(test_id='avatar-image', timeout=30)
+    screenshot('offline-avatar')
+    print('PASS native keyboard positioning, direct signup, server profile/group sync, join link, fresh-device login and private avatar restart/offline cache')
+except Exception as error:
+    try:
+        screenshot('failure')
+        (OUT / 'failure-ui.xml').write_text(ET.tostring(ui(), encoding='unicode'))
+        (OUT / 'failure-keyboard.txt').write_text(adb('shell', 'dumpsys', 'window', 'windows'))
+        # Labels aid CI debugging; input values, email addresses and credentials stay private.
+        for node in ui().iter('node'):
+            if node.get('class', '').endswith('EditText') or node.get('password') == 'true':
+                continue
+            label = node.get('content-desc') or node.get('text') or node.get('resource-id')
+            if label and '@' not in label and PASSWORD not in label:
+                print('VISIBLE', label[:140], node.get('bounds'))
+    except Exception:
+        pass
+    print('FAIL native check at:', STEP, type(error).__name__, str(error))
+    raise SystemExit(1)
+finally:
+    try:
+        adb('shell', 'svc', 'wifi', 'enable')
+        adb('shell', 'svc', 'data', 'enable')
+    except Exception:
+        pass

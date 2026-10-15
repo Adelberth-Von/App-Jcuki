@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from "../auth/provider";
 import { GlassProvider } from "../components/glass";
+import { AppKeyboardProvider } from "../components/keyboard";
 import type { AppPreferences } from "../services/preferences";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View } from "react-native";
@@ -184,6 +185,7 @@ function AppShell() {
             >
               <Stack.Protected guard={!!auth.session || demoMode}>
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="connect" />
                 <Stack.Screen name="agenda" />
                 <Stack.Screen name="activity" />
               </Stack.Protected>
@@ -234,9 +236,11 @@ function AccountWorkspace() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AccountWorkspace />
-      </AuthProvider>
+      <AppKeyboardProvider>
+        <AuthProvider>
+          <AccountWorkspace />
+        </AuthProvider>
+      </AppKeyboardProvider>
     </SafeAreaProvider>
   );
 }

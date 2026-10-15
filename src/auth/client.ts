@@ -16,8 +16,27 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     lock: processLock,
   },
 });
-export async function accountAccessToken() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) throw new Error("AUTH_REQUIRED");
+let refreshing: ReturnType<typeof supabase.auth.refreshSession> | null = null;
+export async function accountAccessToken(
+  force = false,
+  expectedUserId?: string,
+) {
+  if (force && !refreshing) {
+    refreshing = supabase.auth.refreshSession();
+    void refreshing
+      .finally(() => {
+        refreshing = null;
+      })
+      .catch(() => {});
+  }
+  const { data, error } = force
+    ? await refreshing!
+    : await supabase.auth.getSession();
+  if (
+    error ||
+    !data.session ||
+    (expectedUserId && data.session.user.id !== expectedUserId)
+  )
+    throw new Error("AUTH_REQUIRED");
   return data.session.access_token;
 }

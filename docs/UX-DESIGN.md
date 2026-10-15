@@ -72,3 +72,9 @@ Pintu masuk menjadi login atau daftar, dengan demo sebagai pilihan ringan. Penda
 Permukaan kaca memakai garis tepi terang dan gradasi statis lembut, bukan animasi latar terus-menerus. Navigasi mengambang memakai indikator spring dengan native driver dan empat target sentuh besar; tersembunyi ketika keyboard terbuka. Padding konten dan tombol bawah memberi ruang untuk navigasi. Latar native dan navigator mengikuti tema yang sama, termasuk pergantian akun.
 
 GlassView native diaktifkan hanya bila iOS mendukung kedua pemeriksaan ketersediaan. Android memakai BlurTargetView pada konten aktif dan satu BlurView navigasi dengan metode SDK31+, sedangkan kartu memakai lapisan transparan tanpa blur Android tambahan. Hero hijau, teks, input, dan status tetap memiliki kontras. Reduce Transparency mengganti kaca dengan permukaan solid, Reduce Motion mematikan gerak indikator. Kelancaran dan efek kaca native tetap membutuhkan pemeriksaan HP fisik.
+
+## Formulir dan alur grup · 1.5.0
+
+Beranda menjadi titik awal setelah login. Untuk akun tanpa grup, panduan tiga langkah menyusun urutan: buat/gabung, bagikan undangan, isi kalender. Create dan join menjadi halaman penuh dengan navigasi kembali; tempel kode/link mendapat tombol sendiri dan kesalahan tampil dekat formulir. Setelah berhasil, kartu grup langsung menampilkan kode dan aksi berbagi, disusul tombol menuju kalender.
+
+Formulir utama memakai KeyboardAwareScrollView yang mengikuti fokus dan animasi keyboard; sheet menyesuaikan tinggi. Keyboard tidak dipanaskan saat peluncuran, menghindari kilatan IME. Tab navigasi tetap disembunyikan saat mengetik. Foto tidak lagi kembali ke inisial setiap sesi diperbarui; gambar yang sudah tersedia dipertahankan selama pemuatan ulang. Status cloud menjelaskan apakah data benar-benar berhasil dibaca dari server, dan demo menyebutkan bahwa akun tidak dibuat.

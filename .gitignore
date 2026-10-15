@@ -55,3 +55,8 @@ google-services.json
 # Supabase local CLI state
 /supabase/.temp/
 /supabase/.branches/
+
+# Native smoke-test reports and Python bytecode
+native-results/
+__pycache__/
+*.pyc

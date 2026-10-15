@@ -25,6 +25,11 @@ export default function Account() {
     logoutAccount,
     setOverlay,
     notify,
+    syncStatus,
+    refreshing,
+    refresh,
+    lastSyncedAt,
+    time,
   } = useApp();
   const [edits, setEdits] = useState<{ fullName?: string; nickname?: string }>(
     {},
@@ -45,6 +50,9 @@ export default function Account() {
               {profile.nickname}
             </Txt>
             <Txt muted>{session?.user.email}</Txt>
+            <Txt muted size={11}>
+              {t("authUseThisEmail")}
+            </Txt>
           </View>
         </Row>
         <Button
@@ -78,11 +86,37 @@ export default function Account() {
             maxLength={24}
           />
           <Row>
-            <Icon name="cloud-done-outline" color={colors.accent} />
+            <Icon
+              name={
+                syncStatus === "ready"
+                  ? "cloud-done-outline"
+                  : "cloud-offline-outline"
+              }
+              color={syncStatus === "ready" ? colors.accent : colors.peachText}
+            />
             <Txt muted size={12} style={{ flex: 1 }}>
-              {t("authSyncHint")}
+              {t(
+                syncStatus === "ready"
+                  ? "syncReady"
+                  : syncStatus === "loading"
+                    ? "syncLoading"
+                    : "syncFailedHint",
+              )}
             </Txt>
           </Row>
+          {lastSyncedAt !== null && (
+            <Txt muted size={11}>
+              {t("lastSync")}: {time(lastSyncedAt)}
+            </Txt>
+          )}
+          {syncStatus === "error" && (
+            <Button
+              title={t("retry")}
+              disabled={refreshing}
+              kind="secondary"
+              onPress={() => void refresh()}
+            />
+          )}
           <Button
             title={t("save")}
             disabled={

@@ -1,7 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 import { invitationLink } from "../../lib/invitations";
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 import { router } from "expo-router";
 import { useApp } from "../../store";
 import { paginate } from "../../lib/domain";
@@ -9,7 +9,6 @@ import {
   Avatar,
   Button,
   Card,
-  Empty,
   Icon,
   Pager,
   Pill,
@@ -18,6 +17,7 @@ import {
   Screen,
   Txt,
 } from "../../components/ui";
+import { GroupStart } from "../../components/groupStart";
 export default function Groups() {
   const {
     t,
@@ -34,188 +34,181 @@ export default function Groups() {
   } = useApp();
   const [page, setPage] = useState(1),
     p = paginate(groups, page, 4);
+  const copy = (value: string) =>
+    void Clipboard.setStringAsync(value)
+      .then(() => notify("copied"))
+      .catch(() => notify("error"));
   return (
     <Screen
       title={t("groups")}
-      description={t("groupsDescription")}
-      action={{
-        title: t("createGroup"),
-        onPress: () => setOverlay({ kind: "createGroup" }),
-        icon: "people-outline",
-      }}
+      description={t(group ? "groupActiveHint" : "firstGroupWelcome")}
     >
-      <Row>
-        <Button
-          title={t("joinGroup")}
-          icon="enter-outline"
-          kind="secondary"
-          style={{ flex: 1 }}
-          onPress={() => setOverlay({ kind: "joinGroup" })}
-        />
-        {group && (
-          <Button
-            title={t("invite")}
-            kind="soft"
-            style={{ flex: 1 }}
-            onPress={() => setOverlay({ kind: "invite" })}
-          />
-        )}
-      </Row>
-      {group && !demoMode && (
-        <Card
-          style={{ backgroundColor: colors.hero, borderColor: colors.hero }}
-        >
-          <Txt color={colors.heroMuted} size={12} style={{ marginBottom: 10 }}>
-            {group.name}
-          </Txt>
-          <Row>
-            <Icon name="link-outline" color={colors.onHero} />
-            <Txt color={colors.onHero} weight="semibold" size={19}>
-              {t("inviteReady")}
-            </Txt>
-          </Row>
-          <Txt color={colors.heroMuted} size={12} style={{ marginTop: 10 }}>
-            {t("inviteHint")}
-          </Txt>
-          <Txt
-            color={colors.onHero}
-            weight="bold"
-            size={25}
-            style={{ letterSpacing: 2, marginVertical: 20 }}
-          >
-            {group.code}
-          </Txt>
-          <Row style={{ gap: 8 }}>
-            <Button
-              title={t("copy")}
-              kind="secondary"
-              icon="copy-outline"
-              style={{ flex: 1 }}
-              onPress={() =>
-                void Clipboard.setStringAsync(group.code)
-                  .then(() => notify("copied"))
-                  .catch(() => notify("error"))
-              }
-            />
-            <Button
-              title={t("copyLink")}
-              kind="secondary"
-              icon="link-outline"
-              style={{ flex: 1 }}
-              onPress={() =>
-                void Clipboard.setStringAsync(invitationLink(group.code))
-                  .then(() => notify("copied"))
-                  .catch(() => notify("error"))
-              }
-            />
-          </Row>
-        </Card>
-      )}
-      {p.items.length ? (
-        p.items.map((g) => (
-          <Press
-            key={g.id}
-            label={g.name + (g.id === group?.id ? ", " + t("activeGroup") : "")}
-            selected={g.id === group?.id}
-            disabled={busy}
-            onPress={() => {
-              void switchGroup(g.id)
-                .then(() => router.push("/(tabs)"))
-                .catch(() => {});
-            }}
-            style={{ borderRadius: 24 }}
-          >
+      {!groups.length ? (
+        <GroupStart />
+      ) : (
+        <>
+          {group && !demoMode && (
             <Card
               style={{
-                borderColor: g.id === group?.id ? colors.accent : colors.line,
-                backgroundColor:
-                  g.id === group?.id ? colors.accentSoft : colors.surface,
+                backgroundColor: colors.hero,
+                borderColor: colors.hero,
+                padding: 24,
+                gap: 18,
               }}
             >
               <Row between>
-                <View
-                  style={{
-                    width: 54,
-                    height: 54,
-                    borderRadius: 18,
-                    backgroundColor: colors.accentSoft,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <Icon name="people-outline" color={colors.accent} size={27} />
-                </View>
-                <Pill
-                  label={
-                    demoMode
-                      ? t("demoBadge")
-                      : g.id === group?.id
-                        ? t("activeGroup")
-                        : t("cloud")
-                  }
-                  tone={demoMode ? "peach" : "green"}
+                <Pill label={t("activeGroup")} tone="green" />
+                <Icon
+                  name="checkmark-circle-outline"
+                  color={colors.onHero}
+                  size={26}
                 />
               </Row>
-              <Txt
-                size={24}
-                weight="semibold"
-                heading
-                style={{ marginTop: 20, letterSpacing: -0.5 }}
+              <View style={{ gap: 8 }}>
+                <Txt color={colors.heroMuted} size={12}>
+                  {t("circleReady")}
+                </Txt>
+                <Txt heading color={colors.onHero} size={29} weight="semibold">
+                  {group.name}
+                </Txt>
+                <Txt color={colors.heroMuted} size={13}>
+                  {t("circleNextHint")}
+                </Txt>
+              </View>
+              <View
+                style={{
+                  backgroundColor: "#FFFFFF12",
+                  borderRadius: 18,
+                  paddingVertical: 18,
+                  alignItems: "center",
+                  gap: 7,
+                }}
               >
-                {g.name}
-              </Txt>
-              <Txt size={12} muted style={{ marginTop: 3 }}>
-                {g.memberCount} {t("members")}
-              </Txt>
-              <Row between style={{ marginTop: 20 }}>
-                <Row style={{ gap: 4, flex: 1 }}>
-                  {g.id === group?.id ? (
-                    group.members
-                      .slice(0, 4)
-                      .map((m) => <Avatar key={m.id} person={m} size={32} />)
-                  ) : (
-                    <Txt size={11} muted>
-                      {t("seeCalendar")}
-                    </Txt>
-                  )}
-                </Row>
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surface,
-                  }}
+                <Txt color={colors.heroMuted} size={11}>
+                  {t("inviteCode")}
+                </Txt>
+                <Txt
+                  color={colors.onHero}
+                  weight="semibold"
+                  size={22}
+                  style={{ letterSpacing: 1 }}
                 >
-                  <Icon name="arrow-forward" color={colors.accent} />
-                </View>
+                  {group.code}
+                </Txt>
+              </View>
+              <Button
+                title={t("shareInvitation")}
+                icon="share-social-outline"
+                kind="secondary"
+                onPress={() =>
+                  void Share.share({
+                    message:
+                      group.name +
+                      "\n" +
+                      invitationLink(group.code) +
+                      "\n" +
+                      group.code,
+                  }).catch(() => notify("error"))
+                }
+              />
+              <Row>
+                <Button
+                  title={t("copy")}
+                  kind="secondary"
+                  icon="copy-outline"
+                  style={{ flex: 1 }}
+                  onPress={() => copy(group.code)}
+                />
+                <Button
+                  title={t("copyLinkShort")}
+                  kind="secondary"
+                  icon="link-outline"
+                  style={{ flex: 1 }}
+                  onPress={() => copy(invitationLink(group.code))}
+                />
               </Row>
             </Card>
-          </Press>
-        ))
-      ) : (
-        <Card>
-          <Empty
-            title={t("noGroups")}
-            description={t("noGroupsDescription")}
-            icon="people-outline"
-            action={{
-              title: t("joinGroup"),
-              onPress: () => setOverlay({ kind: "joinGroup" }),
-            }}
+          )}
+          <Button
+            title={t("fillMyCalendar")}
+            icon="calendar-outline"
+            onPress={() => router.push("/(tabs)/calendar")}
           />
-        </Card>
-      )}
-      <Pager page={p.page} pages={p.pages} onPage={setPage} />
-      {moreGroups && (
-        <Button
-          title={t("loadMore")}
-          kind="secondary"
-          onPress={() => void loadMoreGroups().catch(() => {})}
-          disabled={busy}
-        />
+          <Row>
+            <Button
+              title={t("addAnotherGroup")}
+              icon="add"
+              kind="secondary"
+              style={{ flex: 1 }}
+              disabled={busy}
+              onPress={() => setOverlay({ kind: "createGroup" })}
+            />
+            <Button
+              title={t("joinGroup")}
+              icon="enter-outline"
+              kind="secondary"
+              style={{ flex: 1 }}
+              disabled={busy}
+              onPress={() => setOverlay({ kind: "joinGroup" })}
+            />
+          </Row>
+          {p.items.map((item) => (
+            <Press
+              key={item.id}
+              label={
+                item.name +
+                (item.id === group?.id ? ", " + t("activeGroup") : "")
+              }
+              selected={item.id === group?.id}
+              disabled={busy}
+              onPress={() =>
+                void switchGroup(item.id)
+                  .then(() => router.push("/(tabs)"))
+                  .catch(() => {})
+              }
+              style={{ borderRadius: 26 }}
+            >
+              <Card
+                style={{
+                  borderColor:
+                    item.id === group?.id ? colors.accent : colors.glassLine,
+                  gap: 18,
+                }}
+              >
+                <Row between>
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <Txt heading size={23} weight="semibold">
+                      {item.name}
+                    </Txt>
+                    <Txt muted size={12}>
+                      {item.memberCount} {t("members")}
+                    </Txt>
+                  </View>
+                  <Icon name="arrow-forward" color={colors.accent} />
+                </Row>
+                {item.id === group?.id && (
+                  <Row style={{ gap: 6 }}>
+                    {group.members.slice(0, 5).map((member) => (
+                      <Avatar key={member.id} person={member} size={34} />
+                    ))}
+                    <Txt muted size={12}>
+                      {t(demoMode ? "demoBadge" : "activeGroup")}
+                    </Txt>
+                  </Row>
+                )}
+              </Card>
+            </Press>
+          ))}
+          <Pager page={p.page} pages={p.pages} onPage={setPage} />
+          {moreGroups && (
+            <Button
+              title={t("loadMore")}
+              kind="secondary"
+              onPress={() => void loadMoreGroups().catch(() => {})}
+              disabled={busy}
+            />
+          )}
+        </>
       )}
       <Txt size={11} muted style={{ textAlign: "center" }}>
         {t("privacy")}

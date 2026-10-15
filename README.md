@@ -42,9 +42,9 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 ## Panduan pemakaian
 
 1. Ketuk **Buat akun**. Isi nama lengkap, nickname, email, password minimal delapan karakter, dan konfirmasi password. Setelah berhasil, akun langsung aktif dan aplikasi masuk; tidak ada email verifikasi.
-2. Untuk akun yang sudah ada, gunakan **Masuk**. Email/password salah menampilkan pop-up; data akun tidak ditimpa. **Jelajahi contoh** tersedia tanpa akun dan **Keluar demo** membawa kembali ke login.
+2. Untuk akun yang sudah ada, gunakan **Masuk**. Email/password salah menampilkan pop-up; data akun tidak ditimpa. **Coba contoh · tanpa membuat akun** hanya membuka data contoh dan **Keluar demo** membawa kembali ke login.
 3. Ketuk avatar atau **Pengaturan → Akun saya** untuk mengubah profil dan foto galeri. Keluar akun lalu masuk dengan akun yang sama di perangkat lain untuk memulihkan data. Tidak perlu memasukkan URL server atau API key.
-4. Buat grup, buka tab **Grup**, salin kode atau link undangan, lalu teman menempelkannya pada **Gabung grup** di perangkat mereka. Mendukung tiga pengguna atau lebih dan beberapa lingkaran.
+4. Setelah akun tersinkron, pilih **Buat grup** atau **Gabung grup**. Formulir terbuka di halaman khusus. Setelah grup dibuat, kode dan tombol **Bagikan undangan** langsung muncul; kode/link juga dapat disalin. Teman memilih **Gabung grup**, menempelkan kode/link, lalu menekan tombol bergabung. Berikutnya pilih **Isi kalender saya**. Mendukung tiga pengguna atau lebih dan beberapa lingkaran.
 5. Saat roster keluar, buka **Kalender**, pilih tanggal, lalu konfirmasi libur. Nyalakan **Isi jam bermain sekarang** jika jamnya diketahui, isi mulai/selesai, dan simpan sekali. Memilih tanggal saja tidak menyimpan apa pun.
 6. Tambahkan rentang lain bila perlu. Menghapus jam tetap mempertahankan libur; membatalkan libur menghapus jam yang terkait. Rentang bentrok dan waktu invalid ditolak.
 7. Buka **Agenda → Buat rencana**, pilih tanggal/jam, lalu teman menjawab Bisa/Mungkin/Tidak bisa. Detail rencana menampilkan jawaban anggota dan ekspor kalender ICS. Percakapan dapat diteruskan melalui aplikasi lain.
@@ -52,6 +52,15 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 9. Ketuk ikon lonceng untuk membaca kabar. Halaman agenda, kabar, grup, teman, dan libur memiliki pagination; **Muat lebih banyak** meminta halaman server berikutnya.
 
 ## Tampilan setiap layar
+
+Alur awal dan undangan terbaru:
+
+<p>
+<img src="docs/preview/first-group.png" alt="Panduan awal membuat atau bergabung ke grup" width="190" />
+<img src="docs/preview/create-group.png" alt="Halaman khusus membuat grup" width="190" />
+<img src="docs/preview/join-group.png" alt="Halaman khusus menempelkan kode atau link" width="190" />
+<img src="docs/preview/group-invitation.png" alt="Kode dan tombol berbagi undangan" width="190" />
+</p>
 
 <p>
 <img src="docs/preview/login-light.png" alt="Login dengan desain kaca" width="190" />
@@ -107,6 +116,12 @@ Screenshot berikut berasal dari layar React Native yang dirender di browser untu
 
 Daftar UI menampilkan **empat item per halaman** dengan Sebelumnya/Berikutnya dan nomor halaman; halaman dikoreksi setelah filter berubah. API menggunakan **cursor/keyset pagination** untuk grup, rencana mendatang/riwayat, dan aktivitas: default 20, batas 1–50, cursor terikat ke identitas/grup/view. Kalender memakai navigasi minggu/bulan. Pagination UI tidak menggantikan pemuatan server; tombol **Muat lebih banyak** melanjutkan cursor tanpa menduplikasi item. Tes mencakup pergantian halaman dan penolakan cursor lintas grup.
 
+## Memeriksa akun dan sinkronisasi
+
+Email akun ada di [Supabase → Authentication → Users](https://supabase.com/dashboard/project/chzyuktjcyrpbdwvdgsc/auth/users). Profil, grup, dan jadwal ada pada **Table Editor → schema jcuki**; schema `public` tidak digunakan. Halaman **Akun saya** menampilkan email yang dipakai login di HP lain dan status sinkronisasi terakhir. Jika koneksi gagal, pilih **Coba lagi**. Data contoh tidak membuat akun Supabase.
+
+Foto dimuat dengan sesi akun, mencoba refresh sesi sekali bila server menolak dengan 401, lalu disimpan di direktori dokumen perangkat per akun. Foto yang sama tidak diunduh ulang setiap layar dibuka. Versi foto berubah ketika pengguna menggantinya; kegagalan sementara dapat dicoba lagi saat sesi atau data diperbarui. Cache tidak menggantikan foto yang disimpan di server.
+
 ## Menjalankan dan menghubungkan teman
 
 Gunakan Node.js 24+ dan npm:
@@ -138,9 +153,9 @@ Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pe
 
 ## Validasi
 
-TypeScript, ESLint dan 53 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature sebelum publikasi. Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
+TypeScript, ESLint dan 60 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
-Pengiriman push FCM/APNs, suara native, keyboard/gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
+Pengiriman push FCM/APNs, suara native, gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
 
 ## English quick start
 

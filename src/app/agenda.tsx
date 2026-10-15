@@ -2,18 +2,23 @@ import React from "react";
 import { useApp } from "../store";
 import { Screen } from "../components/ui";
 import { AgendaList } from "../components/schedule";
+import { GroupStart } from "../components/groupStart";
 export default function Agenda() {
-  const { t, setOverlay } = useApp();
+  const { t, setOverlay, group } = useApp();
   return (
     <Screen
       back
       title={t("agenda")}
-      action={{
-        title: t("makePlan"),
-        onPress: () => setOverlay({ kind: "event" }),
-      }}
+      action={
+        group
+          ? {
+              title: t("makePlan"),
+              onPress: () => setOverlay({ kind: "event" }),
+            }
+          : undefined
+      }
     >
-      <AgendaList full />
+      {group ? <AgendaList full /> : <GroupStart />}
     </Screen>
   );
 }

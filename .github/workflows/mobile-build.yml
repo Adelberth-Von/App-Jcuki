@@ -64,6 +64,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
       - run: npm ci
       - name: Set up Android command-line tools
         uses: android-actions/setup-android@v4
@@ -113,10 +114,57 @@ jobs:
         run: |
           printf '%s\n' '### JCuki Android preview' 'Download the APK from this run’s Artifacts section and install it on Android 13 or later.' 'This standalone preview uses the Expo template debug signing key and includes its JavaScript bundle. Metro is not required.' 'Use a private production signing key or EAS production profile before publishing to Google Play.' >> "$GITHUB_STEP_SUMMARY"
 
+  android-native:
+    name: Android ${{ matrix.api }} keyboard, account, and avatar checks
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [33, 35]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: JCuki-Android13-preview
+          path: artifacts
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - name: Enable emulator hardware acceleration
+        run: sudo chmod a+rw /dev/kvm
+      - name: Run the exact release APK on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 2048M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: false
+          script: |
+            adb shell settings put secure show_ime_with_hard_keyboard 1
+            adb install -r artifacts/JCuki-Android13-preview.apk
+            ANDROID_API_LEVEL=${{ matrix.api }} python scripts/native-smoke.py
+      - name: Upload native screenshots and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: JCuki-native-android-${{ matrix.api }}
+          path: native-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   publish-preview:
     name: Publish direct APK download
     if: github.ref == 'refs/heads/main'
-    needs: android
+    needs: [android, android-native]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -139,20 +187,20 @@ jobs:
             exit 0
           fi
           cat > /tmp/jcuki-release-notes.md <<'NOTES'
-          Android 13+ standalone preview of JCuki 1.4.0, with the JavaScript bundle included.
+          Android 13+ standalone preview of JCuki 1.5.0, with the JavaScript bundle included.
 
-          Direct account registration without verification emails, Supabase Auth login, cross-device profile/group recovery, and validated error popups. Liquid glass surfaces and floating animated navigation with Light/Dark/System themes. Gallery profiles, weekly calendars, paginated plans/activity, Indonesian/English, and timezone-aware reminders.
+          Keyboard-aware Android/iPhone forms, authenticated avatar loading with persistent account-scoped cache, clearer full-page create/join group flow and real cloud sync status. Direct account registration without verification emails and Supabase Auth login across devices. Liquid glass surfaces and floating animated navigation with Light/Dark/System themes. Gallery profiles, weekly calendars, paginated plans/activity, Indonesian/English, and timezone-aware reminders.
 
           Install the attached APK directly; Expo Go and Metro are not needed. This preview uses the Expo template debug signing key. Use EAS/private production signing before store distribution. Shared schedules now use the configured Supabase server. Includes automatic device time zones, exit demo, copyable invitation codes/links, calendar formatter caching and themed navigation backgrounds. Background activity push additionally needs the EAS/Firebase/APNs setup described in docs/NOTIFICATIONS.md. Physical iPhone builds require Apple signing and are separate from this APK.
           NOTES
-          tag="v1.4.0-preview-${GITHUB_RUN_NUMBER}"
+          tag="v1.5.0-preview-${GITHUB_RUN_NUMBER}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             printf '%s\n' 'This immutable preview release already exists.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           gh release create "$tag" artifacts/JCuki-Android13-preview.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "JCuki 1.4.0 — Android preview ${GITHUB_RUN_NUMBER}" \
+            --title "JCuki 1.5.0 — Android preview ${GITHUB_RUN_NUMBER}" \
             --notes-file /tmp/jcuki-release-notes.md --latest
           printf '%s\n' "Direct APK: https://github.com/$GITHUB_REPOSITORY/releases/latest/download/JCuki-Android13-preview.apk" >> "$GITHUB_STEP_SUMMARY"
 

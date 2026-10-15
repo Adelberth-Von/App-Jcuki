@@ -1,4 +1,5 @@
 import React from "react";
+import { GroupStart } from "../../components/groupStart";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useApp } from "../../store";
@@ -52,6 +53,18 @@ export default function Dashboard() {
   const next = days[0];
   const slots = next && member ? playingSlots(member.slots, next) : [];
   if (!onboarded) return <Redirect href="/welcome" />;
+  if (!group)
+    return (
+      <Screen>
+        <View style={{ gap: 9 }}>
+          <Txt heading size={33} weight="semibold">
+            {t("welcome")}, {profile.nickname}.
+          </Txt>
+          <Txt muted>{t("firstGroupWelcome")}</Txt>
+        </View>
+        <GroupStart />
+      </Screen>
+    );
   return (
     <Screen>
       <View style={{ gap: 8 }}>

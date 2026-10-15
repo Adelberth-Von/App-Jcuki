@@ -95,3 +95,48 @@ test("remote HTTP endpoints and embedded credentials are refused", () => {
     "http://10.0.2.2:8787",
   );
 });
+
+test("an expired account token refreshes once before retrying a write, without duplicating the successful write", async () => {
+  const refreshes = [],
+    requests = [];
+  let writes = 0;
+  const client = createApiClient({
+    baseUrl: "https://api.jcuki.test",
+    getToken: async (refresh) => {
+      refreshes.push(refresh);
+      return refresh ? "fresh.token.signature" : "expired.token.signature";
+    },
+    fetcher: async (_url, init) => {
+      requests.push(init.headers.Authorization);
+      if (init.headers.Authorization === "Bearer expired.token.signature")
+        return new Response('{"error":"AUTH_REQUIRED"}', { status: 401 });
+      writes++;
+      return new Response('{"id":"created"}', { status: 201 });
+    },
+  });
+  assert.equal((await client.createGroup("Circle")).id, "created");
+  assert.equal(writes, 1);
+  assert.deepEqual(refreshes, [false, true]);
+  assert.deepEqual(requests, [
+    "Bearer expired.token.signature",
+    "Bearer fresh.token.signature",
+  ]);
+});
+test("a missing account session stays an authentication error instead of being reported as an internet failure", async () => {
+  let requests = 0;
+  const client = createApiClient({
+    baseUrl: "https://api.jcuki.test",
+    getToken: async () => {
+      throw new Error("AUTH_REQUIRED");
+    },
+    fetcher: async () => {
+      requests++;
+      return new Response("{}");
+    },
+  });
+  await assert.rejects(
+    client.getProfile(),
+    (error) => error.code === "AUTH_REQUIRED" && error.status === 401,
+  );
+  assert.equal(requests, 0);
+});

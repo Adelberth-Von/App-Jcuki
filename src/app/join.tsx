@@ -1,6 +1,6 @@
 import { useAuth } from "../auth/provider";
 import React from "react";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Redirect, useLocalSearchParams } from "expo-router";
 import { useApp } from "../store";
 import { invitationCode } from "../lib/invitations";
 import { Button, Card, Screen, Txt } from "../components/ui";
@@ -9,6 +9,12 @@ export default function JoinInvitation() {
   const code = invitationCode(typeof raw === "string" ? raw : "");
   const { session } = useAuth();
   const { t, onboarded, demoMode, busy, joinGroup, exitDemo } = useApp();
+  if (session && onboarded && !demoMode && code)
+    return (
+      <Redirect
+        href={{ pathname: "/connect", params: { mode: "join", code } }}
+      />
+    );
   return (
     <Screen title={t("joinGroup")} back>
       <Card>

@@ -35,6 +35,7 @@ export function validateAccount(fields: AccountFields, register: boolean) {
 export function accountError(error: unknown) {
   const value = error as { code?: string; message?: string; status?: number };
   const code = value?.code || "";
+  if (code === "ACCOUNT_CREATED_LOGIN_FAILED") return "authCreatedLoginFailed";
   if (code === "INVALID_FULL_NAME") return "authFullNameInvalid";
   if (code === "INVALID_NICKNAME") return "invalidNickname";
   if (code === "EMAIL_INVALID") return "authEmailInvalid";

@@ -115,3 +115,22 @@ test("identity migration retains availability and event responses, while photo r
   );
   assert.ok(groups.every((item) => item.members[0].avatarUri === undefined));
 });
+
+test("authenticated workspaces always reconnect to the configured account backend, ignoring old demo/disconnected URLs", () => {
+  for (const saved of [
+    { apiUrl: "", demoMode: false },
+    { apiUrl: "https://old-api.test", demoMode: true },
+  ]) {
+    assert.deepEqual(
+      resolveWorkspaceMode(
+        saved,
+        "https://configured.supabase.co/functions/v1/jcuki",
+        true,
+      ),
+      {
+        apiUrl: "https://configured.supabase.co/functions/v1/jcuki",
+        demoMode: false,
+      },
+    );
+  }
+});

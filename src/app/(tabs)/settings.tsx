@@ -37,6 +37,7 @@ export default function Settings() {
     demoMode,
     apiUrl,
     offline,
+    syncStatus,
     updatePrefs,
     refresh,
     choosePhoto,
@@ -416,9 +417,17 @@ export default function Settings() {
         <Row between style={{ marginBottom: 10 }}>
           <Pill
             label={
-              demoMode ? t("demoMode") : offline ? t("offline") : t("cloud")
+              demoMode
+                ? t("demoMode")
+                : syncStatus === "loading"
+                  ? t("syncLoading")
+                  : syncStatus === "error"
+                    ? t("syncFailed")
+                    : t("syncReady")
             }
-            tone={demoMode || offline ? "peach" : "green"}
+            tone={
+              demoMode || offline || syncStatus !== "ready" ? "peach" : "green"
+            }
           />
           <Icon name="cloud-outline" color={colors.muted} />
         </Row>

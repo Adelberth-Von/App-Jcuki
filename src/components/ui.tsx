@@ -3,11 +3,8 @@ import React, { useEffect, useState } from "react";
 import {
   Animated,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -30,6 +27,8 @@ import { font } from "../theme";
 import type { Profile } from "../lib/types";
 import { LogoMark, LaunchScreen } from "./brand";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useAvatar } from "../hooks/useAvatar";
+import { FormScroll } from "./keyboard";
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 function IconView({
   name,
@@ -143,6 +142,7 @@ export function Press({
   disabled = false,
   selected = false,
   role = "button",
+  testID,
 }: {
   onPress?: () => void;
   children: React.ReactNode;
@@ -151,6 +151,7 @@ export function Press({
   disabled?: boolean;
   selected?: boolean;
   role?: "button" | "tab" | "switch";
+  testID?: string;
 }) {
   const [scale] = useState(() => new Animated.Value(1));
   const reduced = useReducedMotion();
@@ -177,6 +178,7 @@ export function Press({
       style={[{ transform: [{ scale }], opacity: disabled ? 0.45 : 1 }, style]}
     >
       <Pressable
+        testID={testID}
         onPress={onPress}
         disabled={disabled}
         accessibilityRole={role}
@@ -211,6 +213,7 @@ export function Button({
   disabled = false,
   style,
   textColor,
+  testID,
 }: {
   title: string;
   onPress: () => void;
@@ -219,6 +222,7 @@ export function Button({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   textColor?: string;
+  testID?: string;
 }) {
   const colors = useColors();
   const bg =
@@ -242,6 +246,7 @@ export function Button({
             : colors.accent);
   return (
     <Press
+      testID={testID}
       label={title}
       onPress={onPress}
       disabled={disabled}
@@ -318,9 +323,12 @@ export function Avatar({
   person: Pick<Profile, "nickname" | "avatarUri"> & { color?: string };
   size?: number;
 }) {
-  const { colors, imageHeaders } = useApp();
-  const [failedUri, setFailedUri] = useState<string | undefined>(undefined);
-  const failed = !!person.avatarUri && failedUri === person.avatarUri;
+  const { colors, apiUrl, avatarRevision } = useApp();
+  const { source, onError } = useAvatar(
+    person.avatarUri,
+    apiUrl,
+    avatarRevision,
+  );
   const name = person.nickname || "You",
     initials = name
       .trim()
@@ -341,6 +349,7 @@ export function Avatar({
   return (
     <View
       accessibilityLabel={name}
+      accessible={!source}
       style={{
         width: size,
         height: size,
@@ -351,15 +360,14 @@ export function Avatar({
         overflow: "hidden",
       }}
     >
-      {person.avatarUri && !failed ? (
+      {source ? (
         <Image
+          testID="avatar-image"
+          accessible
           source={{
-            uri: person.avatarUri,
-            ...(/^https?:/.test(person.avatarUri)
-              ? { headers: imageHeaders }
-              : {}),
+            uri: source,
           }}
-          onError={() => setFailedUri(person.avatarUri)}
+          onError={onError}
           style={{ width: size, height: size }}
           accessibilityLabel={name}
         />
@@ -543,7 +551,16 @@ export function Screen({
   back?: boolean;
   scroll?: boolean;
 }) {
-  const { colors, refreshing, refresh, demoMode, exitDemo, t, busy } = useApp();
+  const {
+    colors,
+    refreshing,
+    refresh,
+    demoMode,
+    exitDemo,
+    t,
+    busy,
+    syncStatus,
+  } = useApp();
   const inset = useSafeAreaInsets();
   return (
     <SafeAreaView
@@ -555,6 +572,26 @@ export function Screen({
         style={{ flex: 1, width: "100%", maxWidth: 620, alignSelf: "center" }}
       >
         <Header back={back} />
+        {!demoMode && syncStatus === "error" && (
+          <Row
+            between
+            style={{
+              paddingHorizontal: 22,
+              backgroundColor: colors.peach,
+              paddingVertical: 6,
+            }}
+          >
+            <Txt size={12} color={colors.peachText} style={{ flex: 1 }}>
+              {t("syncFailed")}
+            </Txt>
+            <Button
+              kind="text"
+              title={t("retry")}
+              disabled={refreshing}
+              onPress={() => void refresh()}
+            />
+          </Row>
+        )}
         {demoMode && (
           <Row
             between
@@ -581,7 +618,7 @@ export function Screen({
           </Row>
         )}
         {scroll ? (
-          <ScrollView
+          <FormScroll
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             refreshControl={
@@ -616,7 +653,7 @@ export function Screen({
               </View>
             )}
             {children}
-          </ScrollView>
+          </FormScroll>
         ) : (
           children
         )}
@@ -960,16 +997,5 @@ export function Toast({ inModal = false }: { inModal?: boolean }) {
     </View>
   );
 }
-export function KeyboardForm({ children }: { children: React.ReactNode }) {
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1 }}
-    >
-      {children}
-    </KeyboardAvoidingView>
-  );
-}
-
 export const Icon = React.memo(IconView);
 export const Txt = React.memo(TextView);

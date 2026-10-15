@@ -1,19 +1,12 @@
 import { invitationCode, invitationLink } from "../lib/invitations";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  View,
-} from "react-native";
+import { Modal, Pressable, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as Crypto from "expo-crypto";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { FormScroll, SheetKeyboard } from "./keyboard";
 import { useApp, type Overlay } from "../store";
 import {
   addDays,
@@ -273,7 +266,7 @@ function SlotForm({
   }
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
+      <FormScroll
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
@@ -437,7 +430,7 @@ function SlotForm({
           </>
         )}
         <FormError error={error} />
-      </ScrollView>
+      </FormScroll>
       <View
         style={{
           paddingHorizontal: 22,
@@ -535,6 +528,7 @@ function EventForm({
       </Txt>
       <Field
         label={t("activity")}
+        testID="plan-title"
         placeholder={t("activityPlaceholder")}
         value={title}
         onChangeText={setTitle}
@@ -624,6 +618,7 @@ function EventForm({
       <Pill label={zone} dot={false} />
       <FormError error={error} />
       <Button
+        testID="plan-submit"
         title={busy ? t("syncing") : t("makePlan")}
         icon="add"
         disabled={busy}
@@ -1039,8 +1034,7 @@ export function OverlayHost() {
       statusBarTranslucent
       onRequestClose={() => !busy && !confirming && setOverlay(null)}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <SheetKeyboard
         style={{
           flex: 1,
           justifyContent: "flex-end",
@@ -1108,7 +1102,7 @@ export function OverlayHost() {
               overlay={overlay}
             />
           ) : (
-            <ScrollView
+            <FormScroll
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ padding: 22, paddingTop: 14, gap: 20 }}
@@ -1183,11 +1177,11 @@ export function OverlayHost() {
                   />
                 </>
               )}
-            </ScrollView>
+            </FormScroll>
           )}
           <Toast inModal />
         </View>
-      </KeyboardAvoidingView>
+      </SheetKeyboard>
     </Modal>
   );
 }

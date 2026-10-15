@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { GroupStart } from "../../components/groupStart";
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { CalendarWeek } from "../../components/week";
@@ -69,6 +70,12 @@ export default function Calendar() {
         : { kind: "slot", day: date },
     );
   }
+  if (!group)
+    return (
+      <Screen title={t("calendar")} description={t("calendarNeedsGroup")}>
+        <GroupStart />
+      </Screen>
+    );
   return (
     <Screen
       title={t("calendar")}

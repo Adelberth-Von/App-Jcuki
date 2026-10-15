@@ -2,7 +2,7 @@
 
 ## GitHub Actions Android preview
 
-Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads `JCuki-Android13-preview.apk` as an artifact, then publishes a versioned **Android preview** release with the same asset. The stable [one-click APK link](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk) resolves after the first successful publication. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
+Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads `JCuki-Android13-preview.apk` as an artifact, tests that exact APK on Android 13/API 33 and Android 15/API 35 emulators, then publishes a versioned **Android preview** release with the same asset. The stable [one-click APK link](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk) resolves after the first successful publication. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
 
 The automated APK is an **internal preview**. Expo SDK 57's generated release build uses its template debug signing key unless production signing is configured. CI verifies that configuration so a future template change cannot silently alter it. This key is intentionally unsuitable for Google Play production distribution. To publish, use your private production keystore or the EAS `production` profile with managed credentials.
 
@@ -55,3 +55,7 @@ An installed native build is needed to test custom notification audio, system ga
 - [Expo local production builds](https://docs.expo.dev/guides/local-app-production/)
 - [GitHub macOS 26 ARM runner inventory](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)
 - [GitHub Ubuntu 24.04 runner inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)
+
+## Android keyboard and account regression checks
+
+The `android-native` matrix runs [scripts/native-smoke.py](../scripts/native-smoke.py) against the installable release APK. It verifies input bounds above the visible soft keyboard for registration, group name, invitation link and the plan sheet. It creates one labelled QA account per emulator, verifies server profile/group persistence, clears only that emulator's app data to simulate a fresh device, and checks login/photo recovery and offline avatar cache. Publication depends on both emulator jobs succeeding. Screenshots and failure UI/window diagnostics are retained for seven days. See [test data handling](../tests/README.native.md).

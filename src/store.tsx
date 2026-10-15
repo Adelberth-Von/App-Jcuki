@@ -100,9 +100,11 @@ interface AppContextValue {
   demoMode: boolean;
   busy: boolean;
   refreshing: boolean;
+  syncStatus: "loading" | "ready" | "error";
+  lastSyncedAt: number | null;
+  avatarRevision: number;
   offline: boolean;
   apiUrl: string;
-  imageHeaders: Record<string, string>;
   overlay: Overlay | null;
   setOverlay: (v: Overlay | null) => void;
   message: string;
@@ -229,11 +231,11 @@ export function AppProvider({
 }) {
   const { session } = useAuth();
   const authUser = session?.user;
+  const accountId = authUser?.id;
   const STORE = authUser ? "@jcuki/account/v1/" + authUser.id : LEGACY_STORE;
   const photoScope = authUser?.id || "device";
   const initialAccount = useRef({
     authUser,
-    sessionToken: session?.access_token,
     STORE,
     photoScope,
   });
@@ -251,10 +253,14 @@ export function AppProvider({
   const [busy, setBusy] = useState(false),
     [refreshing, setRefreshing] = useState(false),
     [offline, setOffline] = useState(false);
-  const [overlay, setOverlay] = useState<Overlay | null>(null),
+  const [overlay, setOverlayState] = useState<Overlay | null>(null),
     [message, setMessage] = useState("");
-  const [imageHeaders, setImageHeaders] = useState<Record<string, string>>({}),
-    [widgetEnabled, setWidgetEnabled] = useState(true);
+  const [widgetEnabled, setWidgetEnabled] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<"loading" | "ready" | "error">(
+      "loading",
+    ),
+    [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null),
+    [avatarRevision, setAvatarRevision] = useState(0);
   const [groupsCursor, setGroupsCursor] = useState<string | null>(null),
     [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [reminderEvents, setReminderEvents] = useState<ReminderEvent[]>([]);
@@ -269,6 +275,19 @@ export function AppProvider({
       null,
     );
   const persistence = useRef<Promise<void>>(Promise.resolve());
+  const setOverlay = useCallback((next: Overlay | null) => {
+    if (next?.kind === "createGroup" || next?.kind === "joinGroup") {
+      setOverlayState(null);
+      router.push({
+        pathname: "/connect",
+        params: { mode: next.kind === "createGroup" ? "create" : "join" },
+      });
+    } else setOverlayState(next);
+  }, []);
+  const markSynced = useCallback(() => {
+    setSyncStatus("ready");
+    setLastSyncedAt(Date.now());
+  }, []);
   // Read again when either the OS calendar or foreground observation changes.
   // A calendar hook may retain its previous snapshot until its next native event.
   const zone = useMemo(
@@ -293,17 +312,17 @@ export function AppProvider({
     [t],
   );
   const api = useMemo<APIClient | null>(() => {
-    if (!apiUrl || !authUser) return null;
+    if (!apiUrl || !accountId) return null;
     try {
       return createApiClient({
         baseUrl: apiUrl,
-        getToken: accountAccessToken,
+        getToken: (refresh) => accountAccessToken(refresh, accountId),
         getLegacyToken: getOrCreateDeviceToken,
       });
     } catch {
       return null;
     }
-  }, [apiUrl, authUser]);
+  }, [apiUrl, accountId]);
   const time = useCallback(
     (instant: string | number, selectedZone = zone) =>
       formatTime(
@@ -412,14 +431,12 @@ export function AppProvider({
     const initialGate = gate.current;
     let active = true;
     (async () => {
-      const { authUser, sessionToken, STORE, photoScope } =
-        initialAccount.current;
-      const [preferences, id, photo, raw, token] = await Promise.all([
+      const { authUser, STORE, photoScope } = initialAccount.current;
+      const [preferences, deviceId, photo, raw] = await Promise.all([
         loadPreferences(),
         getDeviceUserId(),
         getProfilePhoto(photoScope),
         AsyncStorage.getItem(STORE),
-        getOrCreateDeviceToken(),
       ]);
       let saved: SavedApp = {};
       try {
@@ -429,10 +446,17 @@ export function AppProvider({
       } catch {
         /* a corrupt cache should not prevent onboarding */
       }
+      const cachedId = saved.profile?.id;
+      const id =
+        authUser &&
+        typeof cachedId === "string" &&
+        /^[a-f0-9]{64}$/.test(cachedId)
+          ? cachedId
+          : deviceId;
       if (authUser) saved.demoMode = false;
       else if (!saved.demoMode) saved = {};
       const mode = {
-          ...resolveWorkspaceMode(saved, environmentApiUrl),
+          ...resolveWorkspaceMode(saved, environmentApiUrl, !!authUser),
           demoMode: !authUser && saved.demoMode === true,
         },
         pending =
@@ -499,7 +523,6 @@ export function AppProvider({
             : null,
         );
       }
-      setImageHeaders({ Authorization: "Bearer " + (sessionToken || token) });
       setReady(true);
       await initializeNotifications(preferences.language).catch(() => {
         /* OS permission/settings remain available in Settings */
@@ -604,6 +627,7 @@ export function AppProvider({
         currentWorkspace.current;
       if (demoMode || gate.current.busy) return;
       if (!api) {
+        setSyncStatus("error");
         reportError(new Error("API_NOT_CONNECTED"));
         return;
       }
@@ -659,8 +683,13 @@ export function AppProvider({
             JSON.stringify(old) === JSON.stringify(nextGroup) ? old : nextGroup,
           );
           setOffline(false);
+          markSynced();
+          setAvatarRevision((value) => value + 1);
         } catch (error) {
-          if (current()) reportError(error);
+          if (current()) {
+            setSyncStatus("error");
+            reportError(error);
+          }
         } finally {
           if (current()) setRefreshing(false);
           if (refreshingTask.current?.ticket === ticket)
@@ -670,7 +699,7 @@ export function AppProvider({
       refreshingTask.current = { ticket, promise: task };
       return task;
     },
-    [reportError, applyOwnProfile],
+    [reportError, applyOwnProfile, markSynced],
   );
   useEffect(() => {
     if (ready && onboarded && !demoMode)
@@ -807,6 +836,7 @@ export function AppProvider({
         pendingPhotoUri ? { ...next, avatarUri: pendingPhotoUri } : next,
       );
       setOnboarded(true);
+      if (client) markSynced();
     });
   }
   async function commitDemo(nickname?: string) {
@@ -864,6 +894,7 @@ export function AppProvider({
           );
           applyOwnProfile({ ...remote, avatarUri: uri });
           setPendingPhotoUri(null);
+          markSynced();
         }
         notify("profileUpdated");
       });
@@ -915,28 +946,42 @@ export function AppProvider({
   async function createGroup(name: string) {
     await run(async () => {
       const client = requireCloud(),
-        item = await client.createGroup(name.trim()),
-        selected = await client.getGroup(item.id);
+        item = await client.createGroup(name.trim());
+      const [remote, selected] = await Promise.all([
+        client.getProfile(),
+        client.getGroup(item.id),
+      ]);
+      applyOwnProfile(
+        pendingPhotoUri ? { ...remote, avatarUri: pendingPhotoUri } : remote,
+      );
       setGroups((list) => [
         item,
         ...list.filter((existing) => existing.id !== item.id),
       ]);
       setGroup(selected);
       setOverlay(null);
+      markSynced();
       notify("groupCreated");
     });
   }
   async function joinGroup(code: string) {
     await run(async () => {
       const client = requireCloud(),
-        item = await client.joinGroup(code.trim()),
-        selected = await client.getGroup(item.id);
+        item = await client.joinGroup(code.trim());
+      const [remote, selected] = await Promise.all([
+        client.getProfile(),
+        client.getGroup(item.id),
+      ]);
+      applyOwnProfile(
+        pendingPhotoUri ? { ...remote, avatarUri: pendingPhotoUri } : remote,
+      );
       setGroups((list) => [
         item,
         ...list.filter((existing) => existing.id !== item.id),
       ]);
       setGroup(selected);
       setOverlay(null);
+      markSynced();
       notify("groupJoined");
     });
   }
@@ -1256,13 +1301,6 @@ export function AppProvider({
   useEffect(() => {
     onPreferences?.(prefs);
   }, [prefs, onPreferences]);
-  useEffect(() => {
-    if (api && session?.access_token)
-      void api
-        .avatarHeaders()
-        .then(setImageHeaders)
-        .catch(() => {});
-  }, [api, session?.access_token]);
   return (
     <Context.Provider
       value={{
@@ -1280,7 +1318,9 @@ export function AppProvider({
         refreshing,
         offline,
         apiUrl,
-        imageHeaders,
+        syncStatus,
+        lastSyncedAt,
+        avatarRevision,
         overlay,
         setOverlay,
         message,
