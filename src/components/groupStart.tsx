@@ -38,25 +38,40 @@ export function GroupStart() {
     );
   return (
     <Card style={{ padding: 24, gap: 20 }}>
-      <View
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 20,
-          backgroundColor: colors.accentSoft,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Icon name="people-outline" size={28} color={colors.accent} />
-      </View>
       <View style={{ gap: 9 }}>
-        <Txt heading weight="semibold" size={27}>
-          {t("startTogether")}
-        </Txt>
+        <Row style={{ alignItems: "flex-start" }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: colors.accentSoft,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon name="people-outline" size={24} color={colors.accent} />
+          </View>
+          <Txt heading weight="semibold" size={24} style={{ flex: 1 }}>
+            {t("startTogether")}
+          </Txt>
+        </Row>
         <Txt muted size={14}>
           {t("startTogetherHint")}
         </Txt>
+      </View>
+      <View style={{ gap: 12 }}>
+        <Button
+          title={t("createGroup")}
+          icon="add"
+          onPress={() => setOverlay({ kind: "createGroup" })}
+        />
+        <Button
+          title={t("joinWithCode")}
+          icon="link-outline"
+          kind="secondary"
+          onPress={() => setOverlay({ kind: "joinGroup" })}
+        />
       </View>
       <View style={{ gap: 14 }}>
         {(["groupStepOne", "groupStepTwo", "groupStepThree"] as const).map(
@@ -83,17 +98,6 @@ export function GroupStart() {
           ),
         )}
       </View>
-      <Button
-        title={t("createGroup")}
-        icon="add"
-        onPress={() => setOverlay({ kind: "createGroup" })}
-      />
-      <Button
-        title={t("joinWithCode")}
-        icon="link-outline"
-        kind="secondary"
-        onPress={() => setOverlay({ kind: "joinGroup" })}
-      />
     </Card>
   );
 }

@@ -3,9 +3,9 @@ const id: Record<string, string> = {
   invalidGroupName: "Nama grup harus 2–40 karakter.",
   lastSync: "Terakhir disinkron",
   firstGroupWelcome: "Mulai dengan satu grup untuk kamu dan teman-temanmu.",
-  startTogether: "Mulai bareng teman.",
+  startTogether: "Mulai bareng.",
   startTogetherHint:
-    "Cukup satu orang membuat grup. Yang lain tinggal bergabung memakai kode atau link.",
+    "Satu orang membuat grup. Teman lainnya bergabung lewat kode atau link.",
   groupStepOne: "Buat grup, atau gabung grup milik teman.",
   groupStepTwo: "Bagikan kode/link melalui aplikasi pilihanmu.",
   groupStepThree: "Isi hari libur dan jam bermain di Kalender.",
@@ -343,9 +343,9 @@ const en: Record<string, string> = {
   invalidGroupName: "Use 2–40 characters for the circle name.",
   lastSync: "Last synced",
   firstGroupWelcome: "Start with one private circle for you and your friends.",
-  startTogether: "Make room for your people.",
+  startTogether: "Start together.",
   startTogetherHint:
-    "Only one person needs to create a circle. Everyone else joins with its code or link.",
+    "One person creates the group. Friends join with its code or link.",
   groupStepOne: "Create a circle, or join your friend’s.",
   groupStepTwo: "Share the code/link through your favorite app.",
   groupStepThree: "Add days off and playing hours in Calendar.",

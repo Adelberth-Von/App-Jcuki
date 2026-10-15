@@ -57,7 +57,7 @@ export default function Dashboard() {
     return (
       <Screen>
         <View style={{ gap: 9 }}>
-          <Txt heading size={33} weight="semibold">
+          <Txt heading size={33} weight="semibold" numberOfLines={1}>
             {t("welcome")}, {profile.nickname}.
           </Txt>
           <Txt muted>{t("firstGroupWelcome")}</Txt>
