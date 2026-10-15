@@ -48,8 +48,18 @@ def http(path, method='GET', body=None, auth=False):
 
 
 def ui():
-    adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/jcuki-ui.xml')
-    return ET.fromstring(adb('exec-out', 'cat', '/sdcard/jcuki-ui.xml'))
+    for _ in range(3):
+        try:
+            adb('shell', 'rm', '-f', '/sdcard/jcuki-ui.xml')
+            adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/jcuki-ui.xml')
+            value = adb('exec-out', 'cat', '/sdcard/jcuki-ui.xml')
+            start = value.find('<hierarchy')
+            if start < 0:
+                raise ET.ParseError('Accessibility tree not ready')
+            return ET.fromstring(value[start:])
+        except (ET.ParseError, subprocess.CalledProcessError):
+            time.sleep(.7)
+    raise AssertionError('Accessibility tree was not ready after retries')
 
 
 def bounds(node):
@@ -285,9 +295,10 @@ try:
     adb('shell', 'am', 'force-stop', PACKAGE)
     launch()
     tap('Profile')
-    find('Saved to your account', timeout=40)
     find(test_id='avatar-image', timeout=35)
     record_geometry('account-avatar')
+    scroll_to('Saved to your account')
+    find('Saved to your account', timeout=40)
     STEP = 'fresh device account recovery'
     adb('shell', 'pm', 'clear', PACKAGE)
     launch()
