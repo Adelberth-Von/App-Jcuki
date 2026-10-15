@@ -60,35 +60,3 @@ jobs:
           path: native-results/
           if-no-files-found: ignore
           retention-days: 7
-  publish:
-    name: Publish the verified immutable APK
-    needs: native
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-      actions: read
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: JCuki-Android13-preview
-          run-id: 38706179402
-          github-token: ${{ github.token }}
-          path: artifacts
-      - name: Publish only the current main application source
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
-          test "$current" = '9920f31d3cbea2599a2c002c1c725242600f4577'
-          cat > /tmp/notes.md <<'NOTES'
-          Jcuki 1.5.0 for Android 13+. Keyboard-aware forms, authenticated persistent profile photos, clearer full-page create/join flows and real account sync status. Supabase accounts work across devices without verification emails.
-          
-          This exact APK passed release signature/minSdk checks and Android 13/API 33 plus Android 15/API 35 regression checks. The checks use labelled QA accounts and verify keyboard visibility, server profile/group persistence, fresh-install login and offline photo cache.
-          
-          Install the APK directly; Metro and Expo Go are not needed. This is an internal preview signed with the Expo template debug key. Background push still needs the EAS/Firebase/APNs configuration in the repository guide. Physical iPhone distribution requires Apple signing.
-          NOTES
-          printf '\nNative validation: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> /tmp/notes.md
-          tag='v1.5.0-preview-16'
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then exit 0; fi
-          gh release create "$tag" artifacts/JCuki-Android13-preview.apk --repo "$GITHUB_REPOSITORY" --target 9920f31d3cbea2599a2c002c1c725242600f4577 --title 'JCuki 1.5.0 — Android preview 16' --notes-file /tmp/notes.md --latest
