@@ -92,6 +92,7 @@ def tap(label=None, test_id=None, field=False):
 
 def type_in(test_id, text):
     tap(test_id=test_id, field=True)
+    assert_above_keyboard(test_id)
     # QA fixtures contain only ASCII letters, numbers, @, dot, slash and query punctuation.
     import shlex
     adb('shell', 'input', 'text', shlex.quote(text.replace(' ', '%s')))
