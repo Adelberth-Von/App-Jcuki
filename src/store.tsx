@@ -17,7 +17,6 @@ import {
   eventState,
   formatDate,
   formatTime,
-  validZone,
   localDate,
   removeConfirmedDay,
 } from "./lib/domain";
@@ -243,13 +242,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       null,
     );
   const persistence = useRef<Promise<void>>(Promise.resolve());
-  const zone =
-      prefs.timeZone === "auto"
-        ? calendarZone && validZone(calendarZone)
-          ? calendarZone
-          : deviceZone
-        : getEffectiveTimeZone(prefs),
-    dark =
+  // Read again when either the OS calendar or foreground observation changes.
+  // A calendar hook may retain its previous snapshot until its next native event.
+  const zone = useMemo(
+    () => getEffectiveTimeZone({ timeZone: prefs.timeZone }),
+    // The OS getter is external state; these observations invalidate its snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prefs.timeZone, deviceZone, calendarZone],
+  );
+  const dark =
       prefs.theme === "dark" || (prefs.theme === "system" && scheme === "dark"),
     colors = dark ? darkColors : lightColors;
   const t = useCallback(
