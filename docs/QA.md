@@ -1,8 +1,22 @@
 # Verifikasi sistem Jcuki 1.6.x
 
+## Hasil akhir 1.6.1
+
+[Build 20](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39596345219) **lulus**: TypeScript, lint, 63 tes Node, pengujian Supabase langsung, APK pada emulator Android 13/API 33 dan Android 15/API 35, serta kompilasi aplikasi dan widget iOS Simulator. [APK 1.6.1](https://github.com/Adelberth-Von/App-Jcuki/releases/download/v1.6.1-preview-20/JCuki-Android13-preview.apk) sudah diterbitkan dari source `f78450604c06b1eb53fcd5753e372ab0c3b5f9e8`, Android versionCode 8.
+
+APK berukuran 138.338.477 byte. SHA-256: `0d22ee1e18a245df077d5cc3bfe931613242e1e93e1747a0059ab5832245807c`.
+
+Pada Android 13, batas bawah input password kosong terukur 991 px dengan keyboard mulai pada 1.048 px; kode undangan 996 px dan judul rencana 688 px. Uji memeriksa fokus dan batas input sebelum mengetik. Pendaftaran, buat/gabung grup, rencana, login setelah penghapusan data aplikasi emulator, serta foto setelah restart/offline lulus pada kedua OS.
+
+Catatan keandalan: percobaan pertama Android 13 berhenti ketika menunggu layar login, sebelum isian dimasukkan. Catatan geometri awal hanya berisi kontrol kosong; penyebab awal belum dapat dipastikan. Ulangan pada binary yang sama meluluskan seluruh skenario. Android 15 meluluskan seluruh skenario pada percobaan pertama. Hal ini tetap perlu diperiksa pada perangkat fisik, bukan dianggap jaminan tanpa bug.
+
+Log fungsi saat pengujian APK juga mencatat 50 permintaan aplikasi Android pada `ap-northeast-1`, dengan rata-rata pemrosesan server 807 ms dan maksimum 1.657 ms. Ini mencakup operasi yang beragam dan tidak sama dengan sampel pembacaan terkontrol pada tabel di bawah.
+
 ## Akun dan database
 
 Pemeriksaan pada 21 Oktober 2026, sebelum membuat akun QA baru, menemukan 8 akun di `auth.users`. Semua memiliki hash password, konfirmasi aktif dan riwayat login. Seluruh 8 akun terhubung ke profil aplikasi. Tidak ada akun tanpa profil, profil terhubung tanpa akun, atau keanggotaan tanpa grup/profil.
+
+Audit akhir setelah akun QA ditambahkan menemukan **24/24 akun menggunakan bcrypt**, tanpa akun yang kehilangan profil atau keanggotaan yang kehilangan grup/profil. Jumlah ini mencakup akun QA berlabel dari beberapa pengujian; tidak semua merupakan pengguna nyata. Tidak ada password atau nilai hash yang ditampilkan.
 
 - Email dan autentikasi: [Authentication → Users](https://supabase.com/dashboard/project/chzyuktjcyrpbdwvdgsc/auth/users).
 - Profil, grup, jadwal, rencana dan aktivitas: schema `jcuki` pada Table Editor.
@@ -22,9 +36,9 @@ Optimasi 1.6.1 mengarahkan permintaan fungsi ke wilayah database Tokyo melalui p
 
 Angka ini adalah hasil sampel pengujian, bukan target yang dijamin pada semua jaringan. Zona waktu kalender pengguna ditentukan dari perangkat, terpisah dari lokasi komputasi fungsi.
 
-[Pemeriksaan server pada build 19](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39589684991/job/119187439795) **lulus** pada 21 Oktober 2026: tiga akun baru, profil awal yang dimuat bersamaan, dua sesi independen, serta seluruh skenario di bawah. Pemeriksaan agregat selama audit memastikan seluruh akun yang diperiksa memakai bcrypt; tidak ada nilai hash atau kredensial yang dibaca/ditampilkan dalam laporan.
+[Pemeriksaan server pada build 20](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39596345219/job/119224143007) **lulus** pada 21 Oktober 2026: tiga akun baru, profil awal yang dimuat bersamaan, dua sesi independen, serta seluruh skenario di bawah. Pemeriksaan agregat selama audit memastikan seluruh akun yang diperiksa memakai bcrypt; tidak ada nilai hash atau kredensial yang dibaca/ditampilkan dalam laporan.
 
-[Kompilasi iOS Simulator pada build yang sama](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39589684991/job/119187439830) **lulus**, termasuk aplikasi dan extension widget, memakai Xcode 26.4.1. Ini bukan uji interaksi di iPhone fisik atau IPA bertanda tangan.
+[Kompilasi iOS Simulator pada build yang sama](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39596345219/job/119224066921) **lulus**, termasuk aplikasi dan extension widget, memakai Xcode 26.4.1. Ini bukan uji interaksi di iPhone fisik atau IPA bertanda tangan.
 
 `npm run typecheck`, `npm run lint`, dan `npm test` memeriksa kode serta perilaku backend lokal. Pengujian regresi pagination membuka 40 agenda dan riwayat, mengubah respons, membatalkan rencana, lalu melakukan refresh dan melanjutkan cursor. Pengujian juga memastikan grup yang keanggotaannya sudah hilang tidak tetap ditampilkan.
 

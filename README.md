@@ -12,6 +12,8 @@ Aplikasi penjadwalan untuk teman dengan shift kerja dan zona waktu berbeda. Tand
 
 [Download disini memek](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk)
 
+Versi yang telah diverifikasi: **1.6.1 (build 8)** · [APK versi ini](https://github.com/Adelberth-Von/App-Jcuki/releases/download/v1.6.1-preview-20/JCuki-Android13-preview.apk) · [Hasil dan batas pengujian](docs/QA.md).
+
 [Tampilan dan kode sumber](https://github.com/Adelberth-Von/App-Jcuki) · [Release](https://github.com/Adelberth-Von/App-Jcuki/releases) · [Status build](https://github.com/Adelberth-Von/App-Jcuki/actions/workflows/mobile-build.yml)
 
 APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasil. Link di atas langsung mengunduh file APK, tanpa ZIP atau membuka halaman Actions. Release diberi nama **Android preview**, memakai template debug signing key Expo untuk pengujian. APK menyertakan bundle JavaScript, sehingga tidak membutuhkan Metro/Expo Go. Untuk distribusi Play Store gunakan signing privat/EAS production. Jika belum ada release berhasil, lihat status build; jangan memasang APK lama dengan menganggapnya versi baru.
@@ -176,7 +178,7 @@ Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pe
 
 ## Validasi
 
-[Hasil pengujian APK 1.5.0 pada Android 13 dan 15](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/38714634660) · [Release 1.5.0](https://github.com/Adelberth-Von/App-Jcuki/releases/tag/v1.5.0-preview-17). Keyboard, akun lintas perangkat, grup, serta foto setelah restart/offline telah lolos pada APK yang diterbitkan.
+[Hasil pengujian APK 1.6.1, Supabase, dan kompilasi iOS](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39596345219) · [Release 1.6.1](https://github.com/Adelberth-Von/App-Jcuki/releases/tag/v1.6.1-preview-20). Keyboard, akun lintas perangkat, grup, serta foto setelah restart/offline telah lolos pada APK yang diterbitkan.
 
 TypeScript, ESLint dan 63 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
