@@ -18,11 +18,13 @@ APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasi
 
 Untuk memasang: buka APK di Android 13 atau lebih baru, izinkan pemasangan dari sumber browser/file manager jika diminta OS, lalu buka Jcuki. iPhone memerlukan build terpisah melalui EAS dan Apple signing; APK tidak dapat dipasang di iPhone. Lihat [panduan build](docs/BUILD.md).
 
-## Pembaruan 1.6.0
+## Pembaruan 1.6.1
 
 Beranda menunjukkan langkah berikutnya sesuai isi grup: undang teman, pilih waktu, lalu buat rencana. Panel undangan lebih ringkas; ketuk kode untuk menyalin, atau gunakan Bagikan / Salin link. Profil membedakan perubahan yang belum disimpan dan foto yang belum terunggah, dengan tombol unggah ulang tanpa memilih foto lagi. Refresh otomatis mempertahankan halaman grup, agenda, serta riwayat yang sudah dibuka.
 
 Build baru wajib lolos pemeriksaan langsung ke server Supabase untuk pendaftaran, login dua sesi perangkat, profil, tiga anggota grup, jadwal, respons rencana, foto privat dan pagination sebelum APK diterbitkan. [Cakupan dan batas pengujian](docs/QA.md).
+
+Permintaan aplikasi diarahkan ke Tokyo, dekat database. Pada sampel terkontrol, pembacaan profil/grup turun dari 2,5–3,6 detik menjadi 0,44–0,53 detik. Ini mengurangi waktu tunggu jaringan ketika membuka dan menyimpan jadwal; hasil tiap perangkat/jaringan dapat berbeda. Perpindahan ke password kosong juga mengukur posisi input sebelum karakter pertama diketik.
 
 ### Perbaikan 1.5.0
 
@@ -81,6 +83,15 @@ Alur awal dan undangan terbaru:
 
 Screenshot berikut berasal dari layar React Native yang dirender di browser untuk pemeriksaan layout, memakai data pengujian atau contoh. Picker OS, suara, keyboard, widget, dan push background harus diuji di aplikasi native.
 
+Tampilan alur 1.6.0 dengan data fiktif: langkah berikutnya pada grup baru, tema gelap, undangan ringkas, dan pengunggahan foto yang bisa dicoba ulang.
+
+<p>
+<img src="docs/preview/group-setup-light.png" alt="Langkah berikutnya berdasarkan isi grup" width="190" />
+<img src="docs/preview/group-setup-dark.png" alt="Panduan grup dalam tema gelap" width="190" />
+<img src="docs/preview/invitation-compact.png" alt="Kode undangan yang dapat diketuk dan tombol berbagi" width="190" />
+<img src="docs/preview/account-photo-retry.png" alt="Foto lokal belum tersinkron dan tombol unggah ulang" width="190" />
+</p>
+
 <p>
 <img src="docs/preview/loading-light.png" alt="Loading dengan logo baru" width="190" />
 <img src="docs/preview/login-english.png" alt="Login dalam bahasa Inggris" width="190" />
@@ -111,6 +122,8 @@ Screenshot berikut berasal dari layar React Native yang dirender di browser untu
 | Layar / dialog            | Preview                                                                                                                                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Akun | [Login](docs/preview/login-light.png), [Daftar](docs/preview/register-light.png), [Error](docs/preview/login-error.png), [Profil](docs/preview/account-light.png) |
+| Alur grup 1.6.0 | [Light](docs/preview/group-setup-light.png), [Dark](docs/preview/group-setup-dark.png), [Undangan](docs/preview/invitation-compact.png) |
+| Status penyimpanan 1.6.0 | [Perubahan belum disimpan](docs/preview/account-unsaved.png), [Unggah ulang foto](docs/preview/account-photo-retry.png) |
 | Undangan dari link | [Konfirmasi bergabung](docs/preview/join-invitation.png) |
 | Loading                   | [Light](docs/preview/loading-light.png)                                                                                                                                                                                   |
 | Profil dan foto | [Akun saya](docs/preview/account-light.png) |
@@ -165,7 +178,7 @@ Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pe
 
 [Hasil pengujian APK 1.5.0 pada Android 13 dan 15](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/38714634660) · [Release 1.5.0](https://github.com/Adelberth-Von/App-Jcuki/releases/tag/v1.5.0-preview-17). Keyboard, akun lintas perangkat, grup, serta foto setelah restart/offline telah lolos pada APK yang diterbitkan.
 
-TypeScript, ESLint dan 62 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
+TypeScript, ESLint dan 63 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
 Pengiriman push FCM/APNs, suara native, gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
 

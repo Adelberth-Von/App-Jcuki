@@ -28,6 +28,7 @@ env:
   EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
   EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID }}
+  EXPO_PUBLIC_FUNCTION_REGION: ${{ vars.EXPO_PUBLIC_FUNCTION_REGION }}
 
 jobs:
   checks:
@@ -204,20 +205,22 @@ jobs:
             exit 0
           fi
           cat > /tmp/jcuki-release-notes.md <<'NOTES'
-          Android 13+ standalone preview of JCuki 1.6.0, with the JavaScript bundle included.
+          Android 13+ standalone preview of JCuki 1.6.1, with the JavaScript bundle included.
+
+          Empty password inputs stay visible when Next changes focus, before the first typed character. API and private photo requests execute in Tokyo beside the database. Controlled profile/group reads improved from 2.5–3.6 seconds to 0.44–0.53 seconds in the regional benchmark; actual network latency varies.
 
           Guided group setup, compact invitations, explicit unsaved profile/photo status with upload retry, and refresh that retains loaded agenda/history pages. Live Supabase system checks gate publication. Keyboard-aware Android/iPhone forms, authenticated avatar loading with persistent account-scoped cache, clearer full-page create/join group flow and real cloud sync status. Direct account registration without verification emails and Supabase Auth login across devices. Liquid glass surfaces and floating animated navigation with Light/Dark/System themes. Gallery profiles, weekly calendars, paginated plans/activity, Indonesian/English, and timezone-aware reminders.
 
           Install the attached APK directly; Expo Go and Metro are not needed. This preview uses the Expo template debug signing key. Use EAS/private production signing before store distribution. Shared schedules now use the configured Supabase server. Includes automatic device time zones, exit demo, copyable invitation codes/links, calendar formatter caching and themed navigation backgrounds. Background activity push additionally needs the EAS/Firebase/APNs setup described in docs/NOTIFICATIONS.md. Physical iPhone builds require Apple signing and are separate from this APK.
           NOTES
-          tag="v1.6.0-preview-${GITHUB_RUN_NUMBER}"
+          tag="v1.6.1-preview-${GITHUB_RUN_NUMBER}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             printf '%s\n' 'This immutable preview release already exists.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           gh release create "$tag" artifacts/JCuki-Android13-preview.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "JCuki 1.6.0 — Android preview ${GITHUB_RUN_NUMBER}" \
+            --title "JCuki 1.6.1 — Android preview ${GITHUB_RUN_NUMBER}" \
             --notes-file /tmp/jcuki-release-notes.md --latest
           printf '%s\n' "Direct APK: https://github.com/$GITHUB_REPOSITORY/releases/latest/download/JCuki-Android13-preview.apk" >> "$GITHUB_STEP_SUMMARY"
 

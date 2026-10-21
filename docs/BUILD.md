@@ -2,7 +2,7 @@
 
 ## GitHub Actions Android preview
 
-Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads `JCuki-Android13-preview.apk` as an artifact, tests that exact APK on Android 13/API 33 and Android 15/API 35 emulators, then publishes a versioned **Android preview** release with the same asset. The stable [one-click APK link](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk) resolves after the first successful publication. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
+Every push to `main` runs TypeScript checking, lint, and behavior tests, then generates the native Android project and builds `:app:assembleRelease`. It uploads `JCuki-Android13-preview.apk` as an artifact, tests that exact APK on Android 13/API 33 and Android 15/API 35 emulators, then waits for the live Supabase system check and iOS compilation before publishing a versioned **Android preview** release with the same asset. The stable [one-click APK link](https://github.com/Adelberth-Von/App-Jcuki/releases/latest/download/JCuki-Android13-preview.apk) resolves after the first successful publication. The APK has minimum SDK 33 (Android 13), embeds the JavaScript bundle, and can run without Metro or Expo Go.
 
 The automated APK is an **internal preview**. Expo SDK 57's generated release build uses its template debug signing key unless production signing is configured. CI verifies that configuration so a future template change cannot silently alter it. This key is intentionally unsuitable for Google Play production distribution. To publish, use your private production keystore or the EAS `production` profile with managed credentials.
 
@@ -10,11 +10,11 @@ The job uses Ubuntu 24.04, Node 24, Java 17, Android SDK/build tools 36, the Rea
 
 The workflow creates native projects from Expo configuration; generated `android/` and `ios/` projects are not maintained by hand. It publishes only the preview APK and release metadata, never keys, credentials, source maps, or backend deployment. Only the publication job receives `contents: write`; it verifies that its commit is still the current main head before creating an immutable build tag and setting the latest release. Re-running an already published build does not overwrite its release asset.
 
-## Optional iOS compile check
+## iOS compile check
 
-In **Actions → JCuki mobile build → Run workflow**, enable `build_ios`. That job uses the official `macos-26` ARM runner and selects `/Applications/Xcode_26.4.1.app/Contents/Developer`, meeting SDK 57's Xcode 26.4+ requirement. It generates the iOS project and WidgetKit extension, installs CocoaPods, and compiles the app for a generic iOS Simulator with signing disabled.
+Main pushes also compile iOS. A manual run enables `build_ios` by default; it can be disabled for an Android-only diagnostic run, which does not publish a new release. The iOS job uses the official `macos-26` ARM runner and selects `/Applications/Xcode_26.4.1.app/Contents/Developer`, meeting SDK 57's Xcode 26.4+ requirement. It generates the iOS project and WidgetKit extension, installs CocoaPods, and compiles the app for a generic iOS Simulator with signing disabled.
 
-This is a compilation check, not an IPA or device test. The job is disabled on normal pushes. If GitHub removes that Xcode installation, the version check fails explicitly; update the runner/Xcode path together after checking the official runner inventory. Installing on a physical iPhone requires Apple device signing and provisioning, including the app group's widget extension. JCuki targets iOS 16.4 or later.
+This is a compilation check, not an IPA or device test. Publication also waits for this compile check and the live Supabase system check. If GitHub removes that Xcode installation, the version check fails explicitly; update the runner/Xcode path together after checking the official runner inventory. Installing on a physical iPhone requires Apple device signing and provisioning, including the app group's widget extension. JCuki targets iOS 16.4 or later.
 
 ## EAS builds
 

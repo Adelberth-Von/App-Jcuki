@@ -1,4 +1,4 @@
-# Verifikasi sistem Jcuki 1.6.0
+# Verifikasi sistem Jcuki 1.6.x
 
 ## Akun dan database
 
@@ -12,6 +12,20 @@ Pemeriksaan pada 21 Oktober 2026, sebelum membuat akun QA baru, menemukan 8 akun
 
 ## Pemeriksaan yang dapat diulang
 
+Optimasi 1.6.1 mengarahkan permintaan fungsi ke wilayah database Tokyo melalui parameter gateway resmi. [Perbandingan pada data QA yang sama](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39594949833/job/119204836529) melakukan tiga putaran per endpoint, dengan urutan wilayah bergantian:
+
+| Pembacaan | Median routing otomatis dari AS | Median Tokyo |
+| --- | ---: | ---: |
+| Profil | 2.550 ms | 474 ms |
+| Daftar grup | 2.804 ms | 458 ms |
+| Detail grup | 3.545 ms | 458 ms |
+
+Angka ini adalah hasil sampel pengujian, bukan target yang dijamin pada semua jaringan. Zona waktu kalender pengguna ditentukan dari perangkat, terpisah dari lokasi komputasi fungsi.
+
+[Pemeriksaan server pada build 19](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39589684991/job/119187439795) **lulus** pada 21 Oktober 2026: tiga akun baru, profil awal yang dimuat bersamaan, dua sesi independen, serta seluruh skenario di bawah. Pemeriksaan agregat selama audit memastikan seluruh akun yang diperiksa memakai bcrypt; tidak ada nilai hash atau kredensial yang dibaca/ditampilkan dalam laporan.
+
+[Kompilasi iOS Simulator pada build yang sama](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39589684991/job/119187439830) **lulus**, termasuk aplikasi dan extension widget, memakai Xcode 26.4.1. Ini bukan uji interaksi di iPhone fisik atau IPA bertanda tangan.
+
 `npm run typecheck`, `npm run lint`, dan `npm test` memeriksa kode serta perilaku backend lokal. Pengujian regresi pagination membuka 40 agenda dan riwayat, mengubah respons, membatalkan rencana, lalu melakukan refresh dan melanjutkan cursor. Pengujian juga memastikan grup yang keanggotaannya sudah hilang tidak tetap ditampilkan.
 
 `node scripts/live-system-check.mjs` memakai publishable key dan API aplikasi yang sama dengan pengguna. Script membuat **3 akun QA berlabel** dengan password acak yang hanya disimpan di memori. Jangan menjalankannya berulang tanpa kebutuhan: akun dan rencana QA sengaja dipertahankan, dan pembatasan pendaftaran tetap berlaku. Script tidak memakai service-role key, mengubah akun pengguna yang ada, atau menghapus data pengguna.
@@ -19,6 +33,10 @@ Pemeriksaan pada 21 Oktober 2026, sebelum membuat akun QA baru, menemukan 8 akun
 Cakupannya: pendaftaran di Supabase, password salah, email duplikat, dua sesi independen pada akun yang sama, sinkronisasi profil/grup, tiga zona waktu, penolakan orang di luar grup, tiga anggota, konfirmasi libur dan jam, respons rencana, izin pembatalan, pagination agenda 20+2, pagination aktivitas, foto privat, refresh token, dan logout satu perangkat yang tidak mengeluarkan perangkat lain. Log hanya berisi nama pemeriksaan dan jumlah, tanpa email/password/token.
 
 Workflow build menunggu pemeriksaan server ini dan uji APK pada emulator Android 13 serta 15 sebelum publikasi. [Detail uji native](../tests/README.native.md) mencakup keyboard yang benar-benar terbuka, instalasi baru, pemulihan akun/grup dan foto setelah restart/offline.
+
+Posisi input diuji **sebelum karakter pertama diketik**, termasuk perpindahan lewat tombol Berikutnya ke password kosong. Formulir mengukur batas penuh input terhadap posisi keyboard saat fokus berpindah dan setelah keyboard terbuka, sehingga tidak bergantung pada munculnya event seleksi teks. Pengujian tombol rencana menggunakan pengenal kontrol agar teks panduan tidak dianggap sebagai tombol.
+
+Pemeriksaan browser pada sesi ini memakai backend lokal dan Auth fiktif untuk menguji UI tanpa data pribadi: daftar akun, buat/gabung grup lewat link, pesan kode tidak ditemukan, tidak ada halaman beranda ganda setelah buat/gabung, status perubahan profil, unggahan foto yang sengaja digagalkan lalu dicoba ulang, serta target tombol pada 320/360/430 px dan tema gelap. Ini melengkapi pengujian Supabase langsung; server fiktif tidak dipakai untuk menyimpulkan bahwa autentikasi produksi bekerja.
 
 ## Batas hasil pengujian
 

@@ -13,6 +13,7 @@ import type {
   PageOptions,
   Profile,
 } from "./types";
+import { withFunctionRegion } from "./functionRegion.ts";
 
 export class APIError extends Error {
   code: string;
@@ -124,7 +125,7 @@ export function createApiClient({
       timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const send = async (refresh: boolean) =>
-        fetcher(origin + "/api" + path, {
+        fetcher(withFunctionRegion(origin + "/api" + path), {
           method,
           headers: {
             ...(await headers(refresh)),

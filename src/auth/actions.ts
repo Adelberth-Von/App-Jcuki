@@ -1,6 +1,7 @@
 import { supabase } from "./client";
 import type { AccountFields } from "./validation";
 import { getDeviceTimeZone } from "../services/preferences";
+import { withFunctionRegion } from "../lib/functionRegion";
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL?.trim() ||
   "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki";
@@ -9,12 +10,15 @@ export async function registerAccount(fields: AccountFields) {
   const timer = setTimeout(() => controller.abort(), 20000);
   let response: Response;
   try {
-    response = await fetch(API_URL.replace(/\/+$/, "") + "/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...fields, zone: getDeviceTimeZone() }),
-      signal: controller.signal,
-    });
+    response = await fetch(
+      withFunctionRegion(API_URL.replace(/\/+$/, "") + "/auth/register"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...fields, zone: getDeviceTimeZone() }),
+        signal: controller.signal,
+      },
+    );
   } finally {
     clearTimeout(timer);
   }

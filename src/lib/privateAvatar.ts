@@ -1,3 +1,5 @@
+import { withFunctionRegion } from "./functionRegion.ts";
+
 /** Fetch private images ourselves: RN Web/Image cannot reliably attach refreshed auth headers. */
 export function avatarURL(value: string, apiBase: string) {
   try {
@@ -66,7 +68,7 @@ export function createPrivateAvatarLoader({
           timer = setTimeout(() => controller.abort(), 15000);
         try {
           const request = async (refresh: boolean) =>
-            fetcher(url, {
+            fetcher(withFunctionRegion(url), {
               headers: {
                 Authorization: "Bearer " + (await getToken(scope, refresh)),
               },

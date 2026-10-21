@@ -62,6 +62,14 @@ Push saat aplikasi tertutup **belum aktif**: masih membutuhkan proyek Expo/EAS, 
 
 ## Pemeriksaan masalah
 
+### Wilayah eksekusi fungsi
+
+Klien 1.6.1 mengirim `forceFunctionRegion=ap-northeast-1` untuk API proyek bawaan ini, sehingga komputasi berjalan di Tokyo bersama database. Pendaftaran, kalender, grup, pagination dan unduhan foto privat memakai aturan yang sama. URL undangan dan zona waktu pengguna tetap mengikuti alur biasa. Opsi query resmi ini tidak menambah header CORS atau mengubah token/autorisasi.
+
+[Benchmark terkontrol](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/39594949833/job/119204836529) membandingkan akun dan data yang sama: 2,5–3,6 detik dengan routing otomatis dari runner AS, dibandingkan 0,44–0,53 detik pada Tokyo. Ini sampel pengujian, bukan jaminan latensi di semua jaringan.
+
+Untuk proyek Supabase lain, atur `EXPO_PUBLIC_FUNCTION_REGION` ke wilayah databasenya. Nilai `auto` memakai routing otomatis; tanpa override, hanya proyek Tokyo bawaan ini yang diarahkan secara eksplisit. Pengaturan wilayah merupakan konfigurasi build. Saat wilayah ditentukan, platform tidak otomatis memindahkan eksekusi ke wilayah lain; lihat [Regional Invocations](https://supabase.com/docs/guides/functions/regional-invocation).
+
 Audit 21 Oktober 2026 memastikan 8 akun awal sudah ada pada **Authentication → Users** dan terhubung ke 8 profil. Semua mempunyai hash password dan riwayat login. `public.User` bukan tabel akun aplikasi; tabel itu kosong dan tidak dipakai handler autentikasi. Detail skenario, pemeriksaan langsung server yang menjadi syarat publikasi, serta batas hasil QA tersedia pada [Verifikasi sistem](QA.md).
 
 - **Mode demo:** tekan **Keluar demo**, lalu buat akun/masuk dan buat/gabung grup.

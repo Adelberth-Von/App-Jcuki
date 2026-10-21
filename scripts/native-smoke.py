@@ -10,6 +10,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
@@ -34,6 +35,9 @@ def adb(*args, binary=False):
 
 def http(path, method='GET', body=None, auth=False):
     url = SUPABASE + path if auth else API + path
+    region = os.environ.get('EXPO_PUBLIC_FUNCTION_REGION') or ('ap-northeast-1' if API.startswith('https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/') else '')
+    if not auth and region and region != 'auto':
+        url += ('&' if '?' in url else '?') + urllib.parse.urlencode({'forceFunctionRegion': region})
     headers = {'Content-Type': 'application/json', 'apikey': KEY}
     if not auth and TOKEN:
         headers['Authorization'] = 'Bearer ' + TOKEN

@@ -2,6 +2,51 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { APIError, createApiClient } from "../src/lib/api.ts";
 
+test("Supabase requests execute near the database without losing cursors, views, or mutation bodies", async (context) => {
+  const previous = process.env.EXPO_PUBLIC_FUNCTION_REGION;
+  delete process.env.EXPO_PUBLIC_FUNCTION_REGION;
+  context.after(() => {
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_FUNCTION_REGION;
+    else process.env.EXPO_PUBLIC_FUNCTION_REGION = previous;
+  });
+  const calls = [];
+  const client = createApiClient({
+    baseUrl: "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki",
+    getToken: async () => "a".repeat(64),
+    fetcher: async (url, options) => {
+      calls.push({ url: new URL(url), options });
+      return Response.json({ items: [], nextCursor: null });
+    },
+  });
+  await client.listEvents("circle", {
+    cursor: "abc+def",
+    limit: 20,
+    view: "history",
+  });
+  await client.createGroup("Friends");
+  assert.equal(
+    calls[0].url.pathname,
+    "/functions/v1/jcuki/api/groups/circle/events",
+  );
+  assert.equal(calls[0].url.searchParams.get("cursor"), "abc+def");
+  assert.equal(calls[0].url.searchParams.get("view"), "history");
+  for (const call of calls) {
+    assert.equal(
+      call.url.searchParams.get("forceFunctionRegion"),
+      "ap-northeast-1",
+    );
+    assert.equal(
+      call.options.headers.Authorization,
+      "Bearer " + "a".repeat(64),
+    );
+  }
+  assert.equal(calls[1].options.method, "POST");
+  assert.deepEqual(JSON.parse(calls[1].options.body), { name: "Friends" });
+  process.env.EXPO_PUBLIC_FUNCTION_REGION = "auto";
+  await client.listGroups();
+  assert.equal(calls[2].url.searchParams.has("forceFunctionRegion"), false);
+});
+
 test("client carries device identity and cursor and preserves server failures", async () => {
   const calls = [],
     token = "a".repeat(64);

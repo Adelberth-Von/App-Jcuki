@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "../src/auth/config.ts";
 import { createApiClient } from "../src/lib/api.ts";
 import { localDate } from "../src/lib/domain.ts";
+import { withFunctionRegion } from "../src/lib/functionRegion.ts";
 
 const base = (
   process.env.EXPO_PUBLIC_API_URL || SUPABASE_URL + "/functions/v1/jcuki"
@@ -28,7 +29,7 @@ function client() {
   });
 }
 async function request(path, method, body, token) {
-  const response = await fetch(base + path, {
+  const response = await fetch(withFunctionRegion(base + path), {
     method,
     signal: AbortSignal.timeout(30000),
     headers: {
@@ -39,6 +40,7 @@ async function request(path, method, body, token) {
   });
   return {
     status: response.status,
+    region: response.headers.get("x-sb-edge-region"),
     data: await response.json().catch(() => ({})),
   };
 }
@@ -92,10 +94,13 @@ try {
       zone,
     };
     fields.confirmPassword = fields.password;
-    check(
-      (await request("/auth/register", "POST", fields)).status === 201,
-      "registration_failed",
-    );
+    const registered = await request("/auth/register", "POST", fields);
+    check(registered.status === 201, "registration_failed");
+    const expectedRegion = new URL(
+      withFunctionRegion(base + "/auth/register"),
+    ).searchParams.get("forceFunctionRegion");
+    if (expectedRegion)
+      check(registered.region === expectedRegion, "function_region_mismatch");
     const auth = client();
     const { data, error } = await auth.auth.signInWithPassword({
       email: fields.email,
@@ -292,7 +297,7 @@ try {
   });
   const recovered = await secondApi.getProfile();
   check(photo.avatarUri === recovered.avatarUri, "photo_profile_sync_failed");
-  const image = await fetch(recovered.avatarUri, {
+  const image = await fetch(withFunctionRegion(recovered.avatarUri), {
     headers: { Authorization: "Bearer " + (await token(second)) },
   });
   check(
@@ -300,7 +305,7 @@ try {
     "private_photo_failed",
   );
   check(
-    (await fetch(recovered.avatarUri)).status === 401,
+    (await fetch(withFunctionRegion(recovered.avatarUri))).status === 401,
     "private_photo_publicly_readable",
   );
   const refreshed = await second.auth.refreshSession();
