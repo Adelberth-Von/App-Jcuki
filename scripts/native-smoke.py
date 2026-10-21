@@ -280,8 +280,8 @@ try:
     find('Share invitation', timeout=40)
     STEP = 'plan sheet keyboard'
     tap('Home')
-    scroll_to('Make a plan')
-    tap('Make a plan')
+    scroll_to(test_id='make-plan')
+    tap(test_id='make-plan')
     type_in('plan-title', 'Native QA Hangout')
     assert_above_keyboard('plan-title')
     record_geometry('plan-keyboard')

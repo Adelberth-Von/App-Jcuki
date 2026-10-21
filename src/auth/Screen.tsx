@@ -12,7 +12,7 @@ import { Brand, Button, Icon, IconButton, Row, Txt } from "../components/ui";
 import { loginAccount, registerAccount } from "./actions";
 import { useAuth } from "./provider";
 import { useReducedMotion } from "../hooks/useReducedMotion";
-import { FormScroll } from "../components/keyboard";
+import { FormInput, FormScroll } from "../components/keyboard";
 import {
   accountError,
   validateAccount,
@@ -190,7 +190,7 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
                   size={19}
                   color={errors[row.key] ? colors.danger : colors.muted}
                 />
-                <TextInput
+                <FormInput
                   testID={"auth-" + row.key}
                   ref={(node) => {
                     refs.current[row.key] = node;

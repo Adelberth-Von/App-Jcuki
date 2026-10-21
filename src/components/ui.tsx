@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Switch,
   Text,
-  TextInput,
   View,
   type ColorValue,
   type StyleProp,
@@ -28,7 +27,7 @@ import type { Profile } from "../lib/types";
 import { LogoMark, LaunchScreen } from "./brand";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useAvatar } from "../hooks/useAvatar";
-import { FormScroll } from "./keyboard";
+import { FormInput, FormScroll } from "./keyboard";
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 function IconView({
   name,
@@ -696,7 +695,7 @@ export function Field({
       <Txt size={12} weight="semibold">
         {label}
       </Txt>
-      <TextInput
+      <FormInput
         accessibilityLabel={label}
         placeholderTextColor={colors.muted}
         style={[
@@ -821,7 +820,7 @@ export function Empty({
   title: string;
   description?: string;
   icon?: IconName;
-  action?: { title: string; onPress: () => void };
+  action?: { title: string; onPress: () => void; testID?: string };
 }) {
   const colors = useColors();
   return (
@@ -849,6 +848,7 @@ export function Empty({
       )}
       {action && (
         <Button
+          testID={action.testID}
           title={action.title}
           onPress={action.onPress}
           kind="soft"

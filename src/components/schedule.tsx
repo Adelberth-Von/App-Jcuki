@@ -208,6 +208,7 @@ export function AgendaList({ full = false }: { full?: boolean }) {
           icon="calendar-outline"
           action={{
             title: t("makePlan"),
+            testID: "make-plan",
             onPress: () => setOverlay({ kind: "event" }),
           }}
         />
