@@ -4,6 +4,10 @@ Jcuki membantu lingkaran teman dengan shift yang berubah untuk berbagi hari libu
 
 ## Alur utama
 
+Pada 1.6.0, beranda grup baru memberi satu tindakan berikutnya dan tiga indikator sederhana: Undang, Pilih waktu, Buat rencana. Indikator mengikuti data yang tersimpan, bukan urutan tombol yang pernah ditekan. Kartu selesai tidak memenuhi beranda setelah semua langkah terpenuhi. Undangan di halaman Grup dibuat lebih pendek; area kode bisa ditekan untuk menyalin, dengan Bagikan dan Salin link bersebelahan. Halaman Akun menampilkan perubahan yang belum disimpan dan foto lokal yang belum terunggah secara terpisah dari keberhasilan refresh server.
+
+Refresh otomatis mempertahankan jendela halaman yang sudah dibuka, termasuk riwayat, agar pengguna tidak kehilangan konteks ketika daftar diperbarui. Data tiap halaman diambil ulang dari server untuk memperoleh respons dan pembatalan terbaru, lalu cursor diperbarui bersama datanya.
+
 1. Masuk atau daftar akun lima isian → beranda → buat/gabung lingkaran melalui kode. Akun langsung aktif tanpa email; foto opsional dapat diubah pada halaman Akun saya. Demo tersedia tanpa akun.
 2. Saat jadwal shift keluar, buka kalender mingguan dan pilih tanggal.
 3. Konfirmasi bahwa tanggal tersebut memang libur. Pemilihan tanggal sendiri tidak menyimpan konfirmasi.

@@ -3,7 +3,7 @@
     "name": "JCuki",
     "slug": "jcuki",
     "scheme": "jcuki",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.terrence.jcuki",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "supportsTablet": true,
       "infoPlist": {
         "CFBundleLocalizations": [
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.terrence.jcuki",
-      "versionCode": 6,
+      "versionCode": 7,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#F4F6EF",

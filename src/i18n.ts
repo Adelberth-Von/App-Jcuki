@@ -1,4 +1,21 @@
 const id: Record<string, string> = {
+  profileUnsaved: "Ada perubahan. Ketuk Simpan untuk menyinkronkannya.",
+  photoPendingHint:
+    "Foto tersimpan di perangkat ini. Unggah agar muncul di perangkat lain.",
+  uploadPhotoAgain: "Unggah ulang foto",
+  journeyEyebrow: "MENUJU WAKTU BERSAMA",
+  journeyInvite: "Undang",
+  journeySchedule: "Pilih waktu",
+  journeyPlan: "Buat rencana",
+  journeyInviteTitle: "Ajak temanmu masuk.",
+  journeyInviteHint:
+    "Grupmu sudah tersimpan. Bagikan undangan agar jadwal kalian terhubung.",
+  journeyScheduleTitle: "Kapan kamu bisa?",
+  journeyScheduleHint:
+    "Pilih hari libur, lalu isi jam luangmu. Teman melihatnya dalam waktu lokal mereka.",
+  journeyPlanTitle: "Mulai satu rencana.",
+  journeyPlanHint:
+    "Undang teman bermain atau hangout. Mereka bisa menerima atau memilih nanti.",
   copyLinkShort: "Salin link",
   invalidGroupName: "Nama grup harus 2–40 karakter.",
   lastSync: "Terakhir disinkron",
@@ -339,6 +356,23 @@ const id: Record<string, string> = {
   weekday6: "Sabtu",
 };
 const en: Record<string, string> = {
+  profileUnsaved: "You have changes. Tap Save to sync them.",
+  photoPendingHint:
+    "Photo saved on this device. Upload it to use it on other devices.",
+  uploadPhotoAgain: "Retry photo upload",
+  journeyEyebrow: "MAKE TIME TOGETHER",
+  journeyInvite: "Invite",
+  journeySchedule: "Pick a time",
+  journeyPlan: "Make a plan",
+  journeyInviteTitle: "Bring your friends in.",
+  journeyInviteHint:
+    "Your group is saved. Share its invitation to connect your schedules.",
+  journeyScheduleTitle: "When are you free?",
+  journeyScheduleHint:
+    "Choose a day off, then add your free hours. Friends see them in their local time.",
+  journeyPlanTitle: "Start your first plan.",
+  journeyPlanHint:
+    "Invite friends to play or hang out. They can accept or decide later.",
   copyLinkShort: "Copy link",
   invalidGroupName: "Use 2–40 characters for the circle name.",
   lastSync: "Last synced",

@@ -63,6 +63,7 @@ import {
 import { useActivity } from "./hooks/useActivity";
 import type { PushStatus } from "./services/push";
 import { lightColors, darkColors, type Colors } from "./theme";
+import { readPageWindow, refreshGroupWindow } from "./lib/pageWindow";
 import { translate } from "./i18n";
 export type Overlay =
   | { kind: "slot"; slot?: Availability; day?: string }
@@ -103,6 +104,8 @@ interface AppContextValue {
   syncStatus: "loading" | "ready" | "error";
   lastSyncedAt: number | null;
   avatarRevision: number;
+  photoPending: boolean;
+  retryPhotoUpload: () => Promise<void>;
   offline: boolean;
   apiUrl: string;
   overlay: Overlay | null;
@@ -609,6 +612,7 @@ export function AppProvider({
     demoMode,
     api,
     group,
+    groups,
     profileId: profile.id,
     pendingPhotoUri,
   });
@@ -617,13 +621,14 @@ export function AppProvider({
       demoMode,
       api,
       group,
+      groups,
       profileId: profile.id,
       pendingPhotoUri,
     };
-  }, [demoMode, api, group, profile.id, pendingPhotoUri]);
+  }, [demoMode, api, group, groups, profile.id, pendingPhotoUri]);
   const refresh = useCallback(
     async (silent = false): Promise<void> => {
-      const { demoMode, api, group, profileId, pendingPhotoUri } =
+      const { demoMode, api, group, groups, profileId, pendingPhotoUri } =
         currentWorkspace.current;
       if (demoMode || gate.current.busy) return;
       if (!api) {
@@ -643,11 +648,16 @@ export function AppProvider({
       const task = (async () => {
         try {
           // Refresh is read-only: an in-flight refresh must never overwrite a newer nickname or zone edit.
-          const [remote, page] = await Promise.all([
+          const [remote, firstPage] = await Promise.all([
             api.getProfile(),
             api.listGroups({ limit: 20 }),
           ]);
           if (!current()) return;
+          const page = await readPageWindow(
+            firstPage,
+            groups.length,
+            (cursor) => api.listGroups({ cursor, limit: 20 }),
+          );
           const selectedId = group?.id || page.items[0]?.id;
           let selected: Group | null = null;
           if (selectedId) {
@@ -665,6 +675,9 @@ export function AppProvider({
               else throw error;
             }
           }
+          if (!current()) return;
+          if (selected)
+            selected = await refreshGroupWindow(api, selected, group);
           if (!current()) return;
           const canonical = pendingPhotoUri
             ? { ...remote, avatarUri: pendingPhotoUri }
@@ -902,8 +915,8 @@ export function AppProvider({
       if (selected && !demoMode)
         notify(
           prefs.language === "id"
-            ? "Foto tersimpan di perangkat, tetapi belum tersinkron. Pilih lagi saat terhubung untuk mengunggahnya."
-            : "Photo saved on this device, but not synced. Choose it again when connected to upload it.",
+            ? "Foto tersimpan di perangkat. Buka Profil dan ketuk Unggah ulang foto saat internet tersedia."
+            : "Photo saved on this device. Open Profile and tap Retry photo upload when connected.",
           true,
         );
       else if (
@@ -924,6 +937,18 @@ export function AppProvider({
       applyOwnProfile({ ...(remote || profile), avatarUri: undefined });
       setPendingPhotoUri(null);
       await removeProfilePhoto(photoScope);
+      notify("profileUpdated");
+    });
+  }
+  async function retryPhotoUpload() {
+    if (!pendingPhotoUri || demoMode) return;
+    await run(async () => {
+      const remote = await requireApi().uploadAvatar(
+        await getProfilePhotoUpload(pendingPhotoUri),
+      );
+      applyOwnProfile({ ...remote, avatarUri: pendingPhotoUri });
+      setPendingPhotoUri(null);
+      markSynced();
       notify("profileUpdated");
     });
   }
@@ -1321,6 +1346,8 @@ export function AppProvider({
         syncStatus,
         lastSyncedAt,
         avatarRevision,
+        photoPending: !!pendingPhotoUri,
+        retryPhotoUpload,
         overlay,
         setOverlay,
         message,

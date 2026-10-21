@@ -18,7 +18,13 @@ APK tersedia melalui GitHub Release setelah workflow build dan publikasi berhasi
 
 Untuk memasang: buka APK di Android 13 atau lebih baru, izinkan pemasangan dari sumber browser/file manager jika diminta OS, lalu buka Jcuki. iPhone memerlukan build terpisah melalui EAS dan Apple signing; APK tidak dapat dipasang di iPhone. Lihat [panduan build](docs/BUILD.md).
 
-## Pembaruan 1.5.0
+## Pembaruan 1.6.0
+
+Beranda menunjukkan langkah berikutnya sesuai isi grup: undang teman, pilih waktu, lalu buat rencana. Panel undangan lebih ringkas; ketuk kode untuk menyalin, atau gunakan Bagikan / Salin link. Profil membedakan perubahan yang belum disimpan dan foto yang belum terunggah, dengan tombol unggah ulang tanpa memilih foto lagi. Refresh otomatis mempertahankan halaman grup, agenda, serta riwayat yang sudah dibuka.
+
+Build baru wajib lolos pemeriksaan langsung ke server Supabase untuk pendaftaran, login dua sesi perangkat, profil, tiga anggota grup, jadwal, respons rencana, foto privat dan pagination sebelum APK diterbitkan. [Cakupan dan batas pengujian](docs/QA.md).
+
+### Perbaikan 1.5.0
 
 Formulir mengikuti kolom yang sedang diketik ketika keyboard terbuka. Foto privat dimuat dengan sesi akun dan disimpan per akun, sehingga tetap tersedia sesudah refresh/restart dan saat offline. Alur grup memakai halaman buat/gabung khusus, kode yang langsung terlihat, dan tombol berbagi. Status sinkronisasi serta email akun tampil jelas untuk login dari HP lain.
 
@@ -159,7 +165,7 @@ Widget Android dan WidgetKit iOS menampilkan libur terdekat dan jam opsional; pe
 
 [Hasil pengujian APK 1.5.0 pada Android 13 dan 15](https://github.com/Adelberth-Von/App-Jcuki/actions/runs/38714634660) · [Release 1.5.0](https://github.com/Adelberth-Von/App-Jcuki/releases/tag/v1.5.0-preview-17). Keyboard, akun lintas perangkat, grup, serta foto setelah restart/offline telah lolos pada APK yang diterbitkan.
 
-TypeScript, ESLint dan 60 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
+TypeScript, ESLint dan 62 tes Node memeriksa tiga identitas nyata pada backend SQLite, isolasi grup, foto, transaksi jadwal/aktivitas/antrean, pagination, zona waktu/DST, klaim profil lama, isolasi akun, validasi pendaftaran, penyimpanan sesi besar/terputus, identitas perangkat, terjemahan, serta properti WAV. Uji langsung pada Supabase memeriksa profil tiga zona, buat/gabung grup, penolakan anggota luar, jadwal, rencana, respons, foto, dan cursor aktivitas. Browser QA juga memeriksa daftar langsung aktif, pop-up password salah/tidak cocok, keluar/masuk, profil dan grup pada sesi/perangkat baru, serta undangan yang dilanjutkan setelah pendaftaran. Browser QA memeriksa kalender, lintas tengah malam, bentrok, pagination, persistensi, tema sistem, dan lebar 320/390/430 px. GitHub Actions memeriksa APK minSdk 33 dan signature, lalu menjalankan APK yang sama pada emulator Android 13 dan 15 sebelum publikasi. Uji native memeriksa posisi input saat keyboard terbuka, daftar akun, pemulihan profil/grup setelah data aplikasi emulator dihapus, serta foto privat setelah restart dan saat offline. [Detail pengujian native](tests/README.native.md). Status kompilasi terbaru dapat dilihat di link build; keberhasilan bundel bukan bukti QA perangkat.
 
 Pengiriman push FCM/APNs, suara native, gallery native, widget, TalkBack/VoiceOver dan performa perangkat tetap memerlukan uji Android/iPhone setelah konfigurasi. [Checklist perangkat dan build](docs/BUILD.md) · [Uji notifikasi tiga perangkat](docs/NOTIFICATIONS.md).
 

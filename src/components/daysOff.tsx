@@ -363,7 +363,7 @@ export function FriendsSchedule({ date }: { date?: string }) {
         title={t("friendsSchedule")}
         description={t("friendsHint")}
         action={group ? t("groups") : undefined}
-        onAction={() => router.push("/(tabs)/groups")}
+        onAction={() => router.navigate("/(tabs)/groups")}
       />
       {!friends.length && (
         <Empty

@@ -275,7 +275,7 @@ export function ReminderCard() {
         title={t(reminder.enabled ? "editReminder" : "setReminder")}
         icon="arrow-forward"
         kind="text"
-        onPress={() => router.push("/(tabs)/settings")}
+        onPress={() => router.navigate("/(tabs)/settings")}
         style={{ alignSelf: "flex-start", marginLeft: 43, marginTop: 9 }}
       />
     </View>

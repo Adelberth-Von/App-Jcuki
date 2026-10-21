@@ -1,5 +1,6 @@
 import React from "react";
 import { GroupStart } from "../../components/groupStart";
+import { GroupJourney } from "../../components/groupJourney";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { useApp } from "../../store";
@@ -103,7 +104,7 @@ export default function Dashboard() {
       {group && (
         <Press
           label={t("selectGroup") + ": " + group.name}
-          onPress={() => router.push("/(tabs)/groups")}
+          onPress={() => router.navigate("/(tabs)/groups")}
           style={{ alignSelf: "flex-start" }}
         >
           <Row style={{ gap: 8 }}>
@@ -121,6 +122,7 @@ export default function Dashboard() {
           </Row>
         </Press>
       )}
+      <GroupJourney />
       <Card
         style={{
           backgroundColor: colors.hero,
@@ -210,7 +212,7 @@ export default function Dashboard() {
           onPress={() =>
             next
               ? setOverlay({ kind: "slot", day: next.date, slot: slots[0] })
-              : router.push("/(tabs)/calendar")
+              : router.navigate("/(tabs)/calendar")
           }
           style={{
             marginTop: 22,
@@ -241,7 +243,7 @@ export default function Dashboard() {
         <SectionTitle
           title={t("thisWeek")}
           action={t("seeCalendar")}
-          onAction={() => router.push("/(tabs)/calendar")}
+          onAction={() => router.navigate("/(tabs)/calendar")}
         />
         <WeekStrip
           week={weekStart(today)}

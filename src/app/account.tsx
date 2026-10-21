@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Keyboard, View } from "react-native";
 import { useAuth } from "../auth/provider";
 import { useApp } from "../store";
 import {
@@ -30,12 +30,18 @@ export default function Account() {
     refresh,
     lastSyncedAt,
     time,
+    photoPending,
+    retryPhotoUpload,
   } = useApp();
   const [edits, setEdits] = useState<{ fullName?: string; nickname?: string }>(
     {},
   );
   const fullName = edits.fullName ?? profile.fullName ?? "",
     nickname = edits.nickname ?? profile.nickname;
+  const dirty =
+    fullName.trim() !== (profile.fullName || "") ||
+    nickname.trim() !== profile.nickname;
+  const saved = !dirty && !photoPending && syncStatus === "ready";
   return (
     <Screen
       title={t("authAccount")}
@@ -63,6 +69,20 @@ export default function Account() {
           disabled={busy}
           onPress={() => void choosePhoto()}
         />
+        {photoPending && (
+          <View style={{ gap: 12, marginTop: 16 }}>
+            <Txt size={13} color={colors.peachText}>
+              {t("photoPendingHint")}
+            </Txt>
+            <Button
+              title={t("uploadPhotoAgain")}
+              kind="secondary"
+              icon="cloud-upload-outline"
+              disabled={busy}
+              onPress={() => void retryPhotoUpload().catch(() => {})}
+            />
+          </View>
+        )}
       </Card>
       <Card>
         <SectionTitle title={t("authDetails")} />
@@ -87,20 +107,20 @@ export default function Account() {
           />
           <Row>
             <Icon
-              name={
-                syncStatus === "ready"
-                  ? "cloud-done-outline"
-                  : "cloud-offline-outline"
-              }
-              color={syncStatus === "ready" ? colors.accent : colors.peachText}
+              name={saved ? "cloud-done-outline" : "cloud-offline-outline"}
+              color={saved ? colors.accent : colors.peachText}
             />
             <Txt muted size={12} style={{ flex: 1 }}>
               {t(
-                syncStatus === "ready"
-                  ? "syncReady"
-                  : syncStatus === "loading"
-                    ? "syncLoading"
-                    : "syncFailedHint",
+                dirty
+                  ? "profileUnsaved"
+                  : photoPending
+                    ? "photoPendingHint"
+                    : syncStatus === "ready"
+                      ? "syncReady"
+                      : syncStatus === "loading"
+                        ? "syncLoading"
+                        : "syncFailedHint",
               )}
             </Txt>
           </Row>
@@ -118,18 +138,22 @@ export default function Account() {
             />
           )}
           <Button
-            title={t("save")}
+            title={t(busy ? "syncing" : "save")}
             disabled={
-              busy || fullName.trim().length < 2 || nickname.trim().length < 2
+              busy ||
+              (!dirty && !photoPending) ||
+              fullName.trim().length < 2 ||
+              nickname.trim().length < 2
             }
-            onPress={() =>
+            onPress={() => {
+              Keyboard.dismiss();
               void saveProfile(nickname.trim(), fullName.trim())
                 .then(() => {
                   setEdits({});
                   notify("profileUpdated");
                 })
-                .catch(() => {})
-            }
+                .catch(() => {});
+            }}
           />
         </View>
       </Card>

@@ -38,12 +38,12 @@ export default function Connect() {
     try {
       if (join) await joinGroup(normalized);
       else await createGroup(name);
-      router.replace("/(tabs)/groups");
+      router.dismissTo("/(tabs)/groups");
     } catch (e) {
       const key = e instanceof Error ? e.message : "";
       setError(
         t(
-          key === "INVALID_CODE"
+          key === "INVALID_CODE" || key === "GROUP_NOT_FOUND"
             ? "inviteNotFound"
             : key === "GROUP_FULL"
               ? "groupFull"

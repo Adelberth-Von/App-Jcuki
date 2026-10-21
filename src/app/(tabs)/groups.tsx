@@ -52,22 +52,17 @@ export default function Groups() {
               style={{
                 backgroundColor: colors.hero,
                 borderColor: colors.hero,
-                padding: 24,
-                gap: 18,
+                padding: 20,
+                gap: 16,
               }}
             >
               <Row between>
                 <Pill label={t("activeGroup")} tone="green" />
-                <Icon
-                  name="checkmark-circle-outline"
-                  color={colors.onHero}
-                  size={26}
-                />
+                <Txt color={colors.heroMuted} size={12}>
+                  {group.members.length} {t("members")}
+                </Txt>
               </Row>
               <View style={{ gap: 8 }}>
-                <Txt color={colors.heroMuted} size={12}>
-                  {t("circleReady")}
-                </Txt>
                 <Txt heading color={colors.onHero} size={29} weight="semibold">
                   {group.name}
                 </Txt>
@@ -75,49 +70,53 @@ export default function Groups() {
                   {t("circleNextHint")}
                 </Txt>
               </View>
-              <View
+              <Press
+                label={t("copy") + ": " + t("inviteCode")}
+                onPress={() => copy(group.code)}
                 style={{
                   backgroundColor: "#FFFFFF12",
                   borderRadius: 18,
-                  paddingVertical: 18,
-                  alignItems: "center",
-                  gap: 7,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
                 }}
               >
-                <Txt color={colors.heroMuted} size={11}>
-                  {t("inviteCode")}
-                </Txt>
-                <Txt
-                  color={colors.onHero}
-                  weight="semibold"
-                  size={22}
-                  style={{ letterSpacing: 1 }}
-                >
-                  {group.code}
-                </Txt>
-              </View>
-              <Button
-                title={t("shareInvitation")}
-                icon="share-social-outline"
-                kind="secondary"
-                onPress={() =>
-                  void Share.share({
-                    message:
-                      group.name +
-                      "\n" +
-                      invitationLink(group.code) +
-                      "\n" +
-                      group.code,
-                  }).catch(() => notify("error"))
-                }
-              />
+                <Row between style={{ gap: 8 }}>
+                  <View style={{ gap: 6, flex: 1 }}>
+                    <Txt color={colors.heroMuted} size={11}>
+                      {t("inviteCode")}
+                    </Txt>
+                    <Txt
+                      color={colors.onHero}
+                      weight="semibold"
+                      size={20}
+                      style={{ letterSpacing: 0.8 }}
+                    >
+                      {group.code}
+                    </Txt>
+                  </View>
+                  <Icon
+                    name="copy-outline"
+                    color={colors.heroMuted}
+                    size={20}
+                  />
+                </Row>
+              </Press>
               <Row>
                 <Button
-                  title={t("copy")}
+                  title={t("shareInvitation")}
+                  icon="share-social-outline"
                   kind="secondary"
-                  icon="copy-outline"
                   style={{ flex: 1 }}
-                  onPress={() => copy(group.code)}
+                  onPress={() =>
+                    void Share.share({
+                      message:
+                        group.name +
+                        "\n" +
+                        invitationLink(group.code) +
+                        "\n" +
+                        group.code,
+                    }).catch(() => notify("error"))
+                  }
                 />
                 <Button
                   title={t("copyLinkShort")}
@@ -132,7 +131,7 @@ export default function Groups() {
           <Button
             title={t("fillMyCalendar")}
             icon="calendar-outline"
-            onPress={() => router.push("/(tabs)/calendar")}
+            onPress={() => router.navigate("/(tabs)/calendar")}
           />
           <Row>
             <Button
@@ -163,7 +162,7 @@ export default function Groups() {
               disabled={busy}
               onPress={() =>
                 void switchGroup(item.id)
-                  .then(() => router.push("/(tabs)"))
+                  .then(() => router.navigate("/(tabs)"))
                   .catch(() => {})
               }
               style={{ borderRadius: 26 }}

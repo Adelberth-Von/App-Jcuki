@@ -62,6 +62,8 @@ Push saat aplikasi tertutup **belum aktif**: masih membutuhkan proyek Expo/EAS, 
 
 ## Pemeriksaan masalah
 
+Audit 21 Oktober 2026 memastikan 8 akun awal sudah ada pada **Authentication → Users** dan terhubung ke 8 profil. Semua mempunyai hash password dan riwayat login. `public.User` bukan tabel akun aplikasi; tabel itu kosong dan tidak dipakai handler autentikasi. Detail skenario, pemeriksaan langsung server yang menjadi syarat publikasi, serta batas hasil QA tersedia pada [Verifikasi sistem](QA.md).
+
 - **Mode demo:** tekan **Keluar demo**, lalu buat akun/masuk dan buat/gabung grup.
 - **Kode ditolak:** salin kode 12 karakter dari grup nyata; kode demo bukan undangan aktif.
 - **Tidak tersambung:** periksa internet, status proyek di Supabase, lalu log Edge Function. Health endpoint menguji fungsi; mencoba membuat grup menguji database juga.
