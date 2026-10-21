@@ -1,0 +1,75 @@
+name: Regional server latency check
+on:
+  push:
+    branches: [codex/regional-server-check]
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Compare automatic routing with the database region using labelled QA data
+        run: |
+          node --input-type=module <<'NODE'
+          import { randomBytes } from 'node:crypto';
+          import { createClient } from '@supabase/supabase-js';
+          import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './src/auth/config.ts';
+          const base = SUPABASE_URL + '/functions/v1/jcuki';
+          const password = 'JcukiQA' + randomBytes(20).toString('hex');
+          const email = 'jcuki.qa.region.' + process.env.GITHUB_RUN_ID + '.' + randomBytes(3).toString('hex') + '@example.com';
+          let token = '', step = 'register';
+          async function request(path, region, method='GET', body) {
+            const start = performance.now();
+            const response = await fetch(base + path, {
+              method, signal: AbortSignal.timeout(30000),
+              headers: { 'Content-Type': 'application/json',
+                ...(token ? { Authorization: 'Bearer ' + token } : {}),
+                ...(region ? { 'x-region': region } : {}) },
+              ...(body ? { body: JSON.stringify(body) } : {})
+            });
+            const value = await response.json();
+            if (!response.ok) throw new Error('request_failed');
+            return { value, milliseconds: Math.round(performance.now()-start),
+              servedRegion: response.headers.get('x-sb-edge-region') };
+          }
+          try {
+            await request('/auth/register','ap-northeast-1','POST',{
+              fullName:'Jcuki Regional QA',nickname:'Regional QA',zone:'Asia/Jakarta',
+              email,password,confirmPassword:password
+            });
+            step = 'login';
+            const auth = createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+              auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+            });
+            const { data, error } = await auth.auth.signInWithPassword({email,password});
+            if(error || !data.session) throw new Error('login_failed');
+            token = data.session.access_token;
+            await request('/api/me','ap-northeast-1');
+            step = 'fixture_group';
+            const group = (await request('/api/groups','ap-northeast-1','POST',{name:'Regional latency QA'})).value;
+            step = 'compare';
+            const samples = [];
+            for(let round=0; round<3; round++) {
+              for(const [route,path] of [['profile','/api/me'],['groups','/api/groups'],['group-detail','/api/groups/'+group.id]]) {
+                for(const region of (round%2 ? ['ap-northeast-1',''] : ['','ap-northeast-1'])) {
+                  const result = await request(path,region);
+                  samples.push({round,route,requestedRegion:region||'automatic',
+                    servedRegion:result.servedRegion,milliseconds:result.milliseconds});
+                }
+              }
+            }
+            console.log(JSON.stringify({status:'passed',qaAccountsCreated:1,samples},null,2));
+          } catch {
+            console.error(JSON.stringify({status:'failed',step}));
+            process.exitCode=1;
+          }
+          NODE
