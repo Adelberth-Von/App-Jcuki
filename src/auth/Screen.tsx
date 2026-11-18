@@ -275,7 +275,7 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
               ) : null}
             </View>
           ))}
-          {feedback && (
+          {!!feedback && (
             <View
               style={{
                 padding: 12,
