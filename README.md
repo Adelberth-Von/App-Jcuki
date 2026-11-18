@@ -65,77 +65,17 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 8. Di **Pengaturan**, pilih bahasa, tema, format jam dan zona waktu. Aktifkan pengingat mingguan pada hari/jam yang cocok. Nyalakan notifikasi aktivitas sesudah integrasi push dikonfigurasi.
 9. Ketuk ikon lonceng untuk membaca kabar. Halaman agenda, kabar, grup, teman, dan libur memiliki pagination; **Muat lebih banyak** meminta halaman server berikutnya.
 
-## Tampilan setiap layar
+## Tampilan UI terbaru
 
-Gambar di bawah diambil dari pratinjau versi 1.6.1 dan versi sebelumnya.
+Pratinjau Jcuki pada layar 375 × 812 dengan data demo. Tangkapan layar berasal dari React Native Web.
 
-<p>
-<img src="docs/preview/first-group.png" alt="Panduan awal membuat atau bergabung ke grup" width="190" />
-<img src="docs/preview/create-group.png" alt="Halaman khusus membuat grup" width="190" />
-<img src="docs/preview/join-group.png" alt="Halaman khusus menempelkan kode atau link" width="190" />
-<img src="docs/preview/group-invitation.png" alt="Kode dan tombol berbagi undangan" width="190" />
-</p>
+| Beranda | Kalender | Grup |
+| --- | --- | --- |
+| <img src="docs/preview/current/home.png" alt="Beranda dengan libur berikutnya dan ringkasan minggu ini" width="220" /> | <img src="docs/preview/current/calendar.png" alt="Kalender mingguan dengan detail tanggal yang dipilih" width="220" /> | <img src="docs/preview/current/groups.png" alt="Layar Grup dengan pilihan buat dan gabung grup" width="220" /> |
 
-<p>
-<img src="docs/preview/login-light.png" alt="Login dengan desain kaca" width="190" />
-<img src="docs/preview/register-light.png" alt="Pendaftaran akun" width="190" />
-<img src="docs/preview/login-error.png" alt="Pop-up email atau password salah" width="190" />
-<img src="docs/preview/account-light.png" alt="Pengaturan akun dan foto" width="190" />
-</p>
-
-Screenshot berikut berasal dari layar React Native yang dirender di browser untuk pemeriksaan layout, memakai data pengujian atau contoh. Picker OS, suara, keyboard, widget, dan push background harus diuji di aplikasi native.
-
-Tampilan alur 1.6.0 dengan data fiktif: langkah berikutnya pada grup baru, tema gelap, undangan ringkas, dan pengunggahan foto yang bisa dicoba ulang.
-
-<p>
-<img src="docs/preview/group-setup-light.png" alt="Langkah berikutnya berdasarkan isi grup" width="190" />
-<img src="docs/preview/group-setup-dark.png" alt="Panduan grup dalam tema gelap" width="190" />
-<img src="docs/preview/invitation-compact.png" alt="Kode undangan yang dapat diketuk dan tombol berbagi" width="190" />
-<img src="docs/preview/account-photo-retry.png" alt="Foto lokal belum tersinkron dan tombol unggah ulang" width="190" />
-</p>
-
-<p>
-<img src="docs/preview/loading-light.png" alt="Loading dengan logo baru" width="190" />
-<img src="docs/preview/login-english.png" alt="Login dalam bahasa Inggris" width="190" />
-</p>
-<p>
-<img src="docs/preview/dashboard-light.png" alt="Beranda Light" width="190" />
-<img src="docs/preview/dashboard-dark.png" alt="Beranda Dark" width="190" />
-<img src="docs/preview/calendar-week.png" alt="Kalender mingguan" width="190" />
-<img src="docs/preview/calendar.png" alt="Kalender bulanan" width="190" />
-</p>
-<p>
-<img src="docs/preview/confirm-day.png" alt="Editor konfirmasi libur" width="190" />
-<img src="docs/preview/playing-hours.png" alt="Editor jam bermain opsional" width="190" />
-<img src="docs/preview/groups-light.png" alt="Daftar lingkaran" width="190" />
-<img src="docs/preview/activity-light.png" alt="Kabar dan pagination" width="190" />
-</p>
-<p>
-<img src="docs/preview/agenda-light.png" alt="Agenda lengkap" width="190" />
-<img src="docs/preview/create-plan.png" alt="Buat rencana" width="190" />
-<img src="docs/preview/plan-detail.png" alt="Detail dan jawaban rencana" width="190" />
-</p>
-<p>
-<img src="docs/preview/settings-light.png" alt="Pengaturan Light" width="190" />
-<img src="docs/preview/settings-dark.png" alt="Pengaturan Dark" width="190" />
-<img src="docs/preview/settings-notifications.png" alt="Pengaturan pengingat dan aktivitas" width="190" />
-</p>
-
-| Layar / dialog            | Preview                                                                                                                                                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Akun | [Login](docs/preview/login-light.png), [Daftar](docs/preview/register-light.png), [Error](docs/preview/login-error.png), [Profil](docs/preview/account-light.png) |
-| Alur grup 1.6.0 | [Light](docs/preview/group-setup-light.png), [Dark](docs/preview/group-setup-dark.png), [Undangan](docs/preview/invitation-compact.png) |
-| Status penyimpanan 1.6.0 | [Perubahan belum disimpan](docs/preview/account-unsaved.png), [Unggah ulang foto](docs/preview/account-photo-retry.png) |
-| Undangan dari link | [Konfirmasi bergabung](docs/preview/join-invitation.png) |
-| Loading                   | [Light](docs/preview/loading-light.png)                                                                                                                                                                                   |
-| Profil dan foto | [Akun saya](docs/preview/account-light.png) |
-| Beranda                   | [Light](docs/preview/dashboard-light.png), [Dark](docs/preview/dashboard-dark.png), [English](docs/preview/dashboard-english.png), [320 px](docs/preview/dashboard-small.png), [430 px](docs/preview/dashboard-large.png) |
-| Kalender                  | [Mingguan](docs/preview/calendar-week.png), [Bulanan](docs/preview/calendar.png), [320 px](docs/preview/calendar-small.png)                                                                                               |
-| Editor jadwal             | [Konfirmasi libur](docs/preview/confirm-day.png), [Jam bermain](docs/preview/playing-hours.png)                                                                                                                           |
-| Lingkaran                 | [Daftar grup](docs/preview/groups-light.png), [320 px](docs/preview/groups-small.png), [Buat](docs/preview/create-group.png), [Gabung](docs/preview/join-group.png), [Undangan](docs/preview/invite.png)                                                           |
-| Agenda                    | [Daftar](docs/preview/agenda-light.png), [Buat rencana](docs/preview/create-plan.png), [Detail rencana](docs/preview/plan-detail.png)                                                                                     |
-| Aktivitas                 | [Light](docs/preview/activity-light.png), [Dark](docs/preview/activity-dark.png), [English](docs/preview/activity-english.png)                                                                                            |
-| Pengaturan                | [Light](docs/preview/settings-light.png), [Dark](docs/preview/settings-dark.png), [Notifikasi](docs/preview/settings-notifications.png)                                                                                   |
+| Masuk | Daftar | Pengaturan tema gelap |
+| --- | --- | --- |
+| <img src="docs/preview/current/login.png" alt="Formulir Masuk ke Jcuki dengan pilihan coba demo" width="220" /> | <img src="docs/preview/current/register.png" alt="Formulir buat akun dengan label pada setiap isian" width="220" /> | <img src="docs/preview/current/settings-dark.png" alt="Pengaturan Jcuki dalam tema gelap" width="220" /> |
 
 ## Pagination: sudah ada
 
@@ -187,11 +127,3 @@ Pengiriman push FCM/APNs, suara native, gallery native, widget, TalkBack/VoiceOv
 ## English quick start
 
 Jcuki helps a private circle share days off and optional playing hours across time zones. Download the Android 13+ preview above, create an account with your full name, nickname, email and password (no verification email), then create or join a circle using the same deployed backend. Tap a calendar date, explicitly confirm your day off, optionally enter hours, then make a plan and collect friends' responses. Log in to the same account on another device to restore your data. Choose English and Light/Dark/System in Settings. Sample mode runs locally and does not connect real friends. Background activity push needs the project credentials described in [the notification guide](docs/NOTIFICATIONS.md); iPhone distribution requires Apple signing.
-
-### Detail tampilan terbaru
-
-| Keluar demo | Undangan grup | Zona otomatis dan dark mode |
-| --- | --- | --- |
-| ![Tombol keluar demo](docs/preview/demo-exit.png) | ![Kode dan link undangan](docs/preview/group-invitation.png) | ![Zona otomatis](docs/preview/automatic-timezone-dark.png) |
-
-Screenshot adalah render aplikasi melalui React Native Web; tampilan dialog OS dapat berbeda pada Android/iPhone.
