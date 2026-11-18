@@ -1,8 +1,8 @@
-import { AmbientBackground, GlassSurface, GlassTarget } from "./glass";
 import React, { useEffect, useState } from "react";
 import {
   Animated,
   Image,
+  Platform,
   Pressable,
   RefreshControl,
   Switch,
@@ -117,20 +117,20 @@ export function Card({
 }) {
   const colors = useColors();
   return (
-    <GlassSurface
+    <View
       style={[
         {
-          backgroundColor: colors.glass,
-          borderColor: colors.glassLine,
+          backgroundColor: colors.surface,
+          borderColor: colors.line,
           borderWidth: 1,
-          borderRadius: 28,
-          padding: 20,
+          borderRadius: 16,
+          padding: 16,
         },
         style,
       ]}
     >
       {children}
-    </GlassSurface>
+    </View>
   );
 }
 export function Press({
@@ -139,7 +139,7 @@ export function Press({
   style,
   label,
   disabled = false,
-  selected = false,
+  selected,
   role = "button",
   testID,
 }: {
@@ -152,56 +152,31 @@ export function Press({
   role?: "button" | "tab" | "switch";
   testID?: string;
 }) {
-  const [scale] = useState(() => new Animated.Value(1));
-  const reduced = useReducedMotion();
-  const press = (to: number) => {
-    if (reduced) {
-      scale.setValue(1);
-      return;
-    }
-    Animated.spring(scale, {
-      toValue: to,
-      useNativeDriver: true,
-      speed: 40,
-      bounciness: 0,
-    }).start();
-  };
-  useEffect(() => {
-    if (reduced) {
-      scale.stopAnimation();
-      scale.setValue(1);
-    }
-  }, [reduced, scale]);
   return (
-    <Animated.View
-      style={[{ transform: [{ scale }], opacity: disabled ? 0.45 : 1 }, style]}
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole={role}
+      aria-checked={role === "switch" ? selected : undefined}
+      aria-selected={role === "tab" ? selected : undefined}
+      aria-pressed={
+        Platform.OS === "web" && role === "button" ? selected : undefined
+      }
+      accessibilityLabel={label}
+      accessibilityState={{
+        disabled,
+        selected,
+        ...(role === "switch" ? { checked: selected } : {}),
+      }}
+      style={({ pressed }) => [
+        { minHeight: 48, minWidth: 48, justifyContent: "center" },
+        style,
+        { opacity: disabled ? 0.45 : pressed ? 0.72 : 1 },
+      ]}
     >
-      <Pressable
-        testID={testID}
-        onPress={onPress}
-        disabled={disabled}
-        accessibilityRole={role}
-        aria-checked={role === "switch" ? selected : undefined}
-        accessibilityLabel={label}
-        accessibilityState={{
-          disabled,
-          selected,
-          ...(role === "switch" ? { checked: selected } : {}),
-        }}
-        onPressIn={() => press(0.985)}
-        onPressOut={() => press(1)}
-        style={({ pressed }) => [
-          {
-            minHeight: 48,
-            minWidth: 48,
-            opacity: pressed ? 0.85 : 1,
-            justifyContent: "center",
-          },
-        ]}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+      {children}
+    </Pressable>
   );
 }
 export function Button({
@@ -251,7 +226,7 @@ export function Button({
       disabled={disabled}
       style={[
         {
-          borderRadius: 16,
+          borderRadius: 12,
           backgroundColor: bg,
           borderWidth: kind === "secondary" ? 1 : 0,
           borderColor: colors.line,
@@ -261,7 +236,7 @@ export function Button({
     >
       <Row
         style={{
-          minHeight: 56,
+          minHeight: 48,
           justifyContent: "center",
           paddingHorizontal: 18,
           paddingVertical: 12,
@@ -382,7 +357,7 @@ export function Brand() {
   const colors = useColors();
   return (
     <Row style={{ gap: 9 }}>
-      <LogoMark size={42} />
+      <LogoMark size={36} />
       <Txt size={23} weight="bold" style={{ letterSpacing: -1 }}>
         JCuki
         <Txt color={colors.accent} size={23} weight="bold">
@@ -485,13 +460,15 @@ export function SectionTitle({
 }
 export function Header({ back = false }: { back?: boolean }) {
   const { profile, t, colors, activityUnread, demoMode } = useApp();
-  return (
-    <Row between style={{ paddingHorizontal: 22, minHeight: 78 }}>
-      {back ? (
+  if (back)
+    return (
+      <Row style={{ paddingHorizontal: 16, minHeight: 56 }}>
         <IconButton icon="arrow-back" label={t("back")} onPress={goBack} />
-      ) : (
-        <Brand />
-      )}
+      </Row>
+    );
+  return (
+    <Row between style={{ paddingHorizontal: 16, minHeight: 60 }}>
+      <Brand />
       <Row style={{ gap: 6 }}>
         <View>
           <IconButton
@@ -560,14 +537,14 @@ export function Screen({
     busy,
     syncStatus,
   } = useApp();
-  const inset = useSafeAreaInsets();
   return (
     <SafeAreaView
-      edges={["top", "left", "right"]}
+      edges={
+        back ? ["top", "left", "right", "bottom"] : ["top", "left", "right"]
+      }
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <AmbientBackground />
-      <GlassTarget
+      <View
         style={{ flex: 1, width: "100%", maxWidth: 620, alignSelf: "center" }}
       >
         <Header back={back} />
@@ -575,9 +552,8 @@ export function Screen({
           <Row
             between
             style={{
-              paddingHorizontal: 22,
+              paddingHorizontal: 16,
               backgroundColor: colors.peach,
-              paddingVertical: 6,
             }}
           >
             <Txt size={12} color={colors.peachText} style={{ flex: 1 }}>
@@ -595,8 +571,7 @@ export function Screen({
           <Row
             between
             style={{
-              paddingHorizontal: 22,
-              paddingVertical: 6,
+              paddingHorizontal: 16,
               backgroundColor: colors.accentSoft,
             }}
           >
@@ -628,19 +603,19 @@ export function Screen({
               />
             }
             contentContainerStyle={{
-              paddingHorizontal: 22,
+              paddingHorizontal: 16,
               paddingTop: 12,
-              paddingBottom: action ? 230 : back ? 40 : 132,
+              paddingBottom: 24,
               gap: 24,
             }}
           >
             {title && (
               <View>
                 <Txt
-                  size={34}
+                  size={30}
                   weight="semibold"
                   heading
-                  style={{ letterSpacing: -1.1 }}
+                  style={{ letterSpacing: -0.8, lineHeight: 38 }}
                 >
                   {title}
                 </Txt>
@@ -659,14 +634,11 @@ export function Screen({
         {action && (
           <View
             style={{
-              position: "absolute",
-              bottom: back ? 0 : 92 + inset.bottom,
-              left: 0,
-              right: 0,
-              backgroundColor: "transparent",
-              paddingTop: 12,
-              paddingHorizontal: 22,
-              paddingBottom: 12,
+              borderTopWidth: 1,
+              borderColor: colors.line,
+              backgroundColor: colors.bg,
+              paddingVertical: 8,
+              paddingHorizontal: 16,
             }}
           >
             <Button
@@ -676,10 +648,7 @@ export function Screen({
             />
           </View>
         )}
-      </GlassTarget>
-      {inset.bottom > 0 && back ? (
-        <View style={{ height: inset.bottom }} />
-      ) : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -701,9 +670,9 @@ export function Field({
         style={[
           {
             minHeight: 54,
-            borderRadius: 16,
+            borderRadius: 12,
             borderWidth: 1,
-            borderColor: focused ? colors.accent : colors.line,
+            borderColor: focused ? colors.accent : colors.controlLine,
             backgroundColor: colors.surface,
             paddingHorizontal: 14,
             paddingVertical: 13,
@@ -731,15 +700,17 @@ export function SelectRow({
   value,
   onPress,
   icon,
+  disabled,
 }: {
   label: string;
   value: string;
   onPress: () => void;
   icon?: IconName;
+  disabled?: boolean;
 }) {
   const colors = useColors();
   return (
-    <Press label={label + ": " + value} onPress={onPress}>
+    <Press label={label + ": " + value} onPress={onPress} disabled={disabled}>
       <Row between style={{ paddingVertical: 12, minHeight: 56 }}>
         {icon && <Icon name={icon} color={colors.muted} />}
         <Txt size={14} weight="medium" style={{ flex: 1 }}>
@@ -758,11 +729,13 @@ export function ToggleRow({
   description,
   value,
   onChange,
+  disabled,
 }: {
   label: string;
   description?: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   const colors = useColors();
   return (
@@ -781,6 +754,7 @@ export function ToggleRow({
         label={label}
         role="switch"
         selected={value}
+        disabled={disabled}
         onPress={() => onChange(!value)}
       >
         <View

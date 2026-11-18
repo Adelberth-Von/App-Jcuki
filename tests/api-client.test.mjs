@@ -2,6 +2,33 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { APIError, createApiClient } from "../src/lib/api.ts";
 
+test("account auth and the Jcuki function share the selected Supabase project", async (context) => {
+  const keys = ["EXPO_PUBLIC_SUPABASE_URL", "EXPO_PUBLIC_API_URL"];
+  const previous = keys.map((key) => process.env[key]);
+  context.after(() => {
+    keys.forEach((key, index) => {
+      if (previous[index] === undefined) delete process.env[key];
+      else process.env[key] = previous[index];
+    });
+  });
+  delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+  delete process.env.EXPO_PUBLIC_API_URL;
+  const hosted = await import("../src/auth/config.ts?hosted");
+  assert.equal(
+    hosted.API_URL,
+    "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki",
+  );
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = " https://other.supabase.co/ ";
+  const project = await import("../src/auth/config.ts?project");
+  assert.equal(project.SUPABASE_URL, "https://other.supabase.co/");
+  assert.equal(project.API_URL, "https://other.supabase.co/functions/v1/jcuki");
+
+  process.env.EXPO_PUBLIC_API_URL = " http://127.0.0.1:8787/ ";
+  const local = await import("../src/auth/config.ts?local");
+  assert.equal(local.API_URL, "http://127.0.0.1:8787/");
+});
+
 test("Supabase requests execute near the database without losing cursors, views, or mutation bodies", async (context) => {
   const previous = process.env.EXPO_PUBLIC_FUNCTION_REGION;
   delete process.env.EXPO_PUBLIC_FUNCTION_REGION;
@@ -106,6 +133,60 @@ test("network failures remain failures and are not replaced by a simulated cloud
     invalid.listGroups(),
     (error) => error.code === "IDENTITY_INVALID",
   );
+});
+
+test("malformed server bodies cannot be treated as successful reads or writes", async () => {
+  const responses = [
+    new Response("<html>service unavailable</html>", { status: 200 }),
+    new Response("null", { status: 201 }),
+    new Response("null", { status: 503 }),
+  ];
+  const client = createApiClient({
+    baseUrl: "https://api.jcuki.test",
+    getToken: async () => "a".repeat(64),
+    fetcher: async () => responses.shift(),
+  });
+  await assert.rejects(
+    client.listGroups(),
+    (error) => error.code === "INVALID_SERVER_RESPONSE" && error.status === 200,
+  );
+  await assert.rejects(
+    client.createGroup("Friends"),
+    (error) => error.code === "INVALID_SERVER_RESPONSE" && error.status === 201,
+  );
+  await assert.rejects(
+    client.getProfile(),
+    (error) => error.code === "SERVER_ERROR" && error.status === 503,
+  );
+});
+
+test("the request deadline also covers a stalled response body", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  let reading;
+  const bodyStarted = new Promise((resolve) => {
+    reading = resolve;
+  });
+  const client = createApiClient({
+    baseUrl: "https://api.jcuki.test",
+    getToken: async () => "a".repeat(64),
+    fetcher: async (_url, { signal }) => ({
+      ok: true,
+      status: 200,
+      json: () =>
+        new Promise((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason));
+          reading();
+        }),
+    }),
+  });
+  const result = client.listGroups();
+  await bodyStarted;
+  const rejected = assert.rejects(
+    result,
+    (error) => error.code === "NETWORK_TIMEOUT" && error.status === 0,
+  );
+  context.mock.timers.tick(15000);
+  await rejected;
 });
 test("remote HTTP endpoints and embedded credentials are refused", () => {
   assert.throws(

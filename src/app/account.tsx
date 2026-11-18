@@ -6,13 +6,13 @@ import {
   Avatar,
   Button,
   Card,
+  Divider,
   Field,
-  Icon,
   Row,
   Screen,
-  SectionTitle,
   Txt,
 } from "../components/ui";
+
 export default function Account() {
   const { session } = useAuth();
   const {
@@ -22,55 +22,78 @@ export default function Account() {
     busy,
     saveProfile,
     choosePhoto,
+    deletePhoto,
     logoutAccount,
     setOverlay,
     notify,
-    syncStatus,
-    refreshing,
-    refresh,
-    lastSyncedAt,
-    time,
     photoPending,
     retryPhotoUpload,
   } = useApp();
   const [edits, setEdits] = useState<{ fullName?: string; nickname?: string }>(
     {},
   );
-  const fullName = edits.fullName ?? profile.fullName ?? "",
-    nickname = edits.nickname ?? profile.nickname;
+  const [submitted, setSubmitted] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [touched, setTouched] = useState({ fullName: false, nickname: false });
+  const fullName = edits.fullName ?? profile.fullName ?? "";
+  const nickname = edits.nickname ?? profile.nickname;
   const dirty =
     fullName.trim() !== (profile.fullName || "") ||
     nickname.trim() !== profile.nickname;
-  const saved = !dirty && !photoPending && syncStatus === "ready";
+  const invalidName = fullName.trim().length < 2;
+  const invalidNickname = nickname.trim().length < 2;
+  const nameError = (submitted || touched.fullName) && invalidName;
+  const nicknameError = (submitted || touched.nickname) && invalidNickname;
+
+  async function save() {
+    if (busy) return;
+    setSubmitted(true);
+    setSaveFailed(false);
+    if (invalidName || invalidNickname) return;
+    Keyboard.dismiss();
+    try {
+      await saveProfile(nickname.trim(), fullName.trim());
+      setEdits({});
+      setSubmitted(false);
+      notify("profileUpdated");
+    } catch {
+      setSaveFailed(true);
+    }
+  }
+
   return (
-    <Screen
-      title={t("authAccount")}
-      description={t("authAccountDescription")}
-      back
-    >
-      <Card>
+    <Screen title={t("authAccount")} back>
+      <Card style={{ gap: 16 }}>
         <Row>
-          <Avatar person={profile} size={68} />
+          <Avatar person={profile} size={56} />
           <View style={{ flex: 1, gap: 4 }}>
-            <Txt size={22} weight="semibold">
+            <Txt size={18} weight="semibold">
               {profile.nickname}
             </Txt>
             <Txt muted>{session?.user.email}</Txt>
-            <Txt muted size={11}>
-              {t("authUseThisEmail")}
-            </Txt>
           </View>
         </Row>
-        <Button
-          title={t("changePhoto")}
-          kind="soft"
-          icon="image-outline"
-          style={{ marginTop: 18 }}
-          disabled={busy}
-          onPress={() => void choosePhoto()}
-        />
+        <Row style={{ gap: 8, flexWrap: "wrap" }}>
+          <Button
+            title={t("changePhoto")}
+            kind="secondary"
+            icon="image-outline"
+            style={{ flexGrow: 1 }}
+            disabled={busy}
+            onPress={() => void choosePhoto()}
+          />
+          {profile.avatarUri && (
+            <Button
+              title={t("removePhoto")}
+              kind="text"
+              style={{ flexGrow: 1 }}
+              disabled={busy}
+              onPress={() => void deletePhoto().catch(() => {})}
+            />
+          )}
+        </Row>
         {photoPending && (
-          <View style={{ gap: 12, marginTop: 16 }}>
+          <View style={{ gap: 8 }}>
             <Txt size={13} color={colors.peachText}>
               {t("photoPendingHint")}
             </Txt>
@@ -83,79 +106,65 @@ export default function Account() {
             />
           </View>
         )}
-      </Card>
-      <Card>
-        <SectionTitle title={t("authDetails")} />
-        <View style={{ gap: 18 }}>
+        <Divider />
+        <View style={{ gap: 4 }}>
           <Field
             label={t("authFullName")}
+            accessibilityHint={nameError ? t("authFullNameInvalid") : undefined}
+            style={nameError ? { borderColor: colors.danger } : undefined}
             value={fullName}
-            onChangeText={(fullName) =>
-              setEdits((old) => ({ ...old, fullName }))
-            }
+            onBlur={() => setTouched((old) => ({ ...old, fullName: true }))}
+            onChangeText={(fullName) => {
+              setEdits((old) => ({ ...old, fullName }));
+              setSaveFailed(false);
+            }}
+            editable={!busy}
             autoComplete="name"
             maxLength={80}
           />
+          {nameError && (
+            <View accessibilityRole="alert">
+              <Txt color={colors.danger} size={13}>
+                {t("authFullNameInvalid")}
+              </Txt>
+            </View>
+          )}
+        </View>
+        <View style={{ gap: 4 }}>
           <Field
             label={t("nickname")}
+            accessibilityHint={nicknameError ? t("invalidNickname") : undefined}
+            style={nicknameError ? { borderColor: colors.danger } : undefined}
             value={nickname}
-            onChangeText={(nickname) =>
-              setEdits((old) => ({ ...old, nickname }))
-            }
+            onBlur={() => setTouched((old) => ({ ...old, nickname: true }))}
+            onChangeText={(nickname) => {
+              setEdits((old) => ({ ...old, nickname }));
+              setSaveFailed(false);
+            }}
+            editable={!busy}
             autoComplete="nickname"
             maxLength={24}
           />
-          <Row>
-            <Icon
-              name={saved ? "cloud-done-outline" : "cloud-offline-outline"}
-              color={saved ? colors.accent : colors.peachText}
-            />
-            <Txt muted size={12} style={{ flex: 1 }}>
-              {t(
-                dirty
-                  ? "profileUnsaved"
-                  : photoPending
-                    ? "photoPendingHint"
-                    : syncStatus === "ready"
-                      ? "syncReady"
-                      : syncStatus === "loading"
-                        ? "syncLoading"
-                        : "syncFailedHint",
-              )}
-            </Txt>
-          </Row>
-          {lastSyncedAt !== null && (
-            <Txt muted size={11}>
-              {t("lastSync")}: {time(lastSyncedAt)}
-            </Txt>
+          {nicknameError && (
+            <View accessibilityRole="alert">
+              <Txt color={colors.danger} size={13}>
+                {t("invalidNickname")}
+              </Txt>
+            </View>
           )}
-          {syncStatus === "error" && (
-            <Button
-              title={t("retry")}
-              disabled={refreshing}
-              kind="secondary"
-              onPress={() => void refresh()}
-            />
-          )}
-          <Button
-            title={t(busy ? "syncing" : "save")}
-            disabled={
-              busy ||
-              (!dirty && !photoPending) ||
-              fullName.trim().length < 2 ||
-              nickname.trim().length < 2
-            }
-            onPress={() => {
-              Keyboard.dismiss();
-              void saveProfile(nickname.trim(), fullName.trim())
-                .then(() => {
-                  setEdits({});
-                  notify("profileUpdated");
-                })
-                .catch(() => {});
-            }}
-          />
         </View>
+        {saveFailed && (
+          <View accessibilityRole="alert">
+            <Txt color={colors.danger} size={13}>
+              {t("profileUpdateFailed")}
+            </Txt>
+          </View>
+        )}
+        <Button
+          title={t(busy && dirty ? "syncing" : "save")}
+          disabled={busy || !dirty}
+          onPress={() => void save()}
+        />
       </Card>
       <Button
         title={t("authLogout")}
@@ -168,8 +177,8 @@ export default function Account() {
             title: t("authLogout"),
             description: t("authLogoutDescription"),
             onConfirm: async () => {
-              setOverlay(null);
               await logoutAccount();
+              setOverlay(null);
             },
           })
         }

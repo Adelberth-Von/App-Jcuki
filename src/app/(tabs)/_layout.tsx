@@ -1,14 +1,14 @@
-import { LiquidNavigation } from "../../components/liquidNav";
 import React from "react";
-import { View } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../../store";
 import { Icon, type IconName } from "../../components/ui";
 import { font } from "../../theme";
 export default function TabLayout() {
-  const { colors, t } = useApp(),
-    insets = useSafeAreaInsets();
+  const { colors, t } = useApp();
+  const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const tabs: [string, string, IconName][] = [
     ["index", "dashboard", "home-outline"],
     ["calendar", "calendar", "calendar-outline"],
@@ -17,7 +17,6 @@ export default function TabLayout() {
   ];
   return (
     <Tabs
-      tabBar={(props) => <LiquidNavigation {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -27,15 +26,13 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
-          height: 76 + insets.bottom,
-          paddingBottom: Math.max(10, insets.bottom),
-          paddingTop: 10,
+          height: 48 + Math.ceil(16 * fontScale) + insets.bottom,
+          paddingTop: 4,
         },
         tabBarItemStyle: { minHeight: 48 },
         tabBarLabelStyle: {
           fontFamily: font.semibold,
           fontSize: 12,
-          marginTop: 2,
         },
         sceneStyle: { backgroundColor: colors.bg },
       }}
@@ -50,9 +47,9 @@ export default function TabLayout() {
             tabBarIcon: ({ color, focused }) => (
               <View
                 style={{
-                  width: 54,
-                  height: 32,
-                  borderRadius: 12,
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: focused ? colors.accentSoft : "transparent",

@@ -17,7 +17,7 @@ Proyek **JCuki** (`chzyuktjcyrpbdwvdgsc`) sudah terhubung sejak versi 1.3.0; aku
 - [Edge Function jcuki](https://supabase.com/dashboard/project/chzyuktjcyrpbdwvdgsc/functions): API profil, foto, grup, undangan, jadwal, rencana, respons, dan aktivitas.
 - PostgreSQL schema privat **jcuki**, sembilan tabel. Pilih schema tersebut pada Table Editor untuk melihat data. Schema `public` sengaja tetap kosong.
 - Endpoint aplikasi: `https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki`.
-- Pemeriksaan server: tambahkan `/health`; respons normal berisi `JCuki API`.
+- Pemeriksaan server: tambahkan `/health`; respons `200` berisi `JCuki API` jika fungsi dapat mengakses schema akun dan kalender. Respons `503` dengan `DATABASE_UNAVAILABLE` berarti koneksi atau migration yang dibutuhkan belum siap.
 
 Aplikasi → Edge Function → PostgreSQL. `backend/index.mjs` memeriksa identitas dan keanggotaan sebelum membaca/mengubah data. Adapter Postgres mempertahankan transaksi batch, parameter SQL, pagination cursor, serta batas 50 anggota/grup. Semua tabel privat mengaktifkan RLS dan menolak akses langsung `anon`/`authenticated`; tidak ada kebijakan publik karena akses dilakukan melalui server. Advisor `RLS Enabled No Policy` di schema privat ini adalah informasi tentang penolakan akses langsung tersebut.
 
@@ -50,9 +50,9 @@ supabase functions deploy jcuki --project-ref chzyuktjcyrpbdwvdgsc
 
 Migration awal sudah diterapkan pada proyek ini. Periksa history sebelum menjalankan `db push`; jangan mengulang pembuatan tabel. `supabase/config.toml` mendefinisikan autentikasi fungsi. Import relatif membawa handler bersama di `backend/` saat deployment.
 
-`EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` opsional untuk proyek Auth sendiri. Deploy migration dan fungsi pada proyek yang sama. Backend Cloudflare alternatif belum menyediakan implementasi Admin Auth; gunakan Supabase untuk pendaftaran resmi.
+Untuk proyek Supabase sendiri, isi `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` dari proyek tersebut. Deploy migration dan fungsi pada proyek yang sama. Aplikasi memakai fungsi `jcuki` dari proyek yang dikonfigurasi. Backend Cloudflare alternatif belum menyediakan implementasi Admin Auth. Gunakan Supabase untuk pendaftaran resmi.
 
-`EXPO_PUBLIC_API_URL` opsional untuk developer, misalnya backend lokal; tanpa override aplikasi memakai alamat proyek di atas. Untuk preview web, atur secret `ALLOWED_ORIGINS` berisi origin web yang tepat, dipisahkan koma. Native tidak memerlukan CORS origin. Jangan mengizinkan origin sembarang untuk sekadar menutupi error konfigurasi.
+`EXPO_PUBLIC_API_URL` opsional untuk developer, misalnya backend lokal. Untuk preview web, atur secret `ALLOWED_ORIGINS` berisi origin web yang tepat, dipisahkan koma. Native tidak memerlukan CORS origin. Jangan mengizinkan origin sembarang untuk sekadar menutupi error konfigurasi.
 
 ## Notifikasi
 
@@ -74,7 +74,7 @@ Audit 21 Oktober 2026 memastikan 8 akun awal sudah ada pada **Authentication →
 
 - **Mode demo:** tekan **Keluar demo**, lalu buat akun/masuk dan buat/gabung grup.
 - **Kode ditolak:** salin kode 12 karakter dari grup nyata; kode demo bukan undangan aktif.
-- **Tidak tersambung:** periksa internet, status proyek di Supabase, lalu log Edge Function. Health endpoint menguji fungsi; mencoba membuat grup menguji database juga.
+- **Tidak tersambung:** periksa internet, status proyek di Supabase, dan respons `/health`. Jika hasilnya `503`, periksa riwayat migration dan log Edge Function. Buat grup percobaan di proyek pengembangan untuk memeriksa penulisan data dan keanggotaan.
 - **Jam berbeda:** itu normal jika perangkat berbeda zona; interval disimpan sebagai UTC. Periksa zona otomatis HP.
 - **Data tidak tampak di public:** pilih schema `jcuki` di dashboard.
 

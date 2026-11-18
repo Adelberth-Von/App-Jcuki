@@ -1,23 +1,23 @@
 import * as Clipboard from "expo-clipboard";
-import { invitationLink } from "../../lib/invitations";
 import React, { useState } from "react";
 import { Share, View } from "react-native";
 import { router } from "expo-router";
 import { useApp } from "../../store";
 import { paginate } from "../../lib/domain";
+import { invitationLink } from "../../lib/invitations";
 import {
-  Avatar,
   Button,
   Card,
+  Divider,
   Icon,
   Pager,
-  Pill,
   Press,
   Row,
   Screen,
   Txt,
 } from "../../components/ui";
 import { GroupStart } from "../../components/groupStart";
+
 export default function Groups() {
   const {
     t,
@@ -32,89 +32,59 @@ export default function Groups() {
     loadMoreGroups,
     busy,
   } = useApp();
-  const [page, setPage] = useState(1),
-    p = paginate(groups, page, 4);
-  const copy = (value: string) =>
-    void Clipboard.setStringAsync(value)
-      .then(() => notify("copied"))
+  const [page, setPage] = useState(1);
+  const active = demoMode ? null : group;
+  const others = groups.filter((item) => item.id !== active?.id);
+  const list = paginate(others, page, 4);
+  const copy = (text: string) =>
+    void Clipboard.setStringAsync(text)
+      .then((copied) => notify(copied ? "copied" : "error"))
       .catch(() => notify("error"));
+
   return (
-    <Screen
-      title={t("groups")}
-      description={t(group ? "groupActiveHint" : "firstGroupWelcome")}
-    >
+    <Screen title={t("groups")}>
       {!groups.length ? (
         <GroupStart />
       ) : (
         <>
-          {group && !demoMode && (
-            <Card
-              style={{
-                backgroundColor: colors.hero,
-                borderColor: colors.hero,
-                padding: 20,
-                gap: 16,
-              }}
-            >
-              <Row between>
-                <Pill label={t("activeGroup")} tone="green" />
-                <Txt color={colors.heroMuted} size={12}>
-                  {group.members.length} {t("members")}
+          {active && (
+            <Card style={{ gap: 16 }}>
+              <View style={{ gap: 4 }}>
+                <Txt size={13} muted>
+                  {t("activeGroup")}
                 </Txt>
-              </Row>
-              <View style={{ gap: 8 }}>
-                <Txt heading color={colors.onHero} size={29} weight="semibold">
-                  {group.name}
+                <Txt heading size={24} weight="semibold">
+                  {active.name}
                 </Txt>
-                <Txt color={colors.heroMuted} size={13}>
-                  {t("circleNextHint")}
+                <Txt muted>
+                  {active.members.length} {t("members")}
                 </Txt>
               </View>
+              <Divider />
               <Press
-                label={t("copy") + ": " + t("inviteCode")}
-                onPress={() => copy(group.code)}
-                style={{
-                  backgroundColor: "#FFFFFF12",
-                  borderRadius: 18,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                }}
+                label={t("copy") + " " + t("inviteCode") + ", " + active.code}
+                onPress={() => copy(active.code)}
               >
-                <Row between style={{ gap: 8 }}>
-                  <View style={{ gap: 6, flex: 1 }}>
-                    <Txt color={colors.heroMuted} size={11}>
+                <Row between>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Txt size={13} muted>
                       {t("inviteCode")}
                     </Txt>
-                    <Txt
-                      color={colors.onHero}
-                      weight="semibold"
-                      size={20}
-                      style={{ letterSpacing: 0.8 }}
-                    >
-                      {group.code}
+                    <Txt weight="semibold" size={18}>
+                      {active.code}
                     </Txt>
                   </View>
-                  <Icon
-                    name="copy-outline"
-                    color={colors.heroMuted}
-                    size={20}
-                  />
+                  <Icon name="copy-outline" color={colors.accent} />
                 </Row>
               </Press>
-              <Row>
+              <Row style={{ gap: 8, flexWrap: "wrap" }}>
                 <Button
                   title={t("shareInvitation")}
-                  icon="share-social-outline"
-                  kind="secondary"
-                  style={{ flex: 1 }}
+                  icon="share-outline"
+                  style={{ flexGrow: 1, flexBasis: 154 }}
                   onPress={() =>
                     void Share.share({
-                      message:
-                        group.name +
-                        "\n" +
-                        invitationLink(group.code) +
-                        "\n" +
-                        group.code,
+                      message: `${active.name}\n${invitationLink(active.code)}\n${active.code}`,
                     }).catch(() => notify("error"))
                   }
                 />
@@ -122,23 +92,18 @@ export default function Groups() {
                   title={t("copyLinkShort")}
                   kind="secondary"
                   icon="link-outline"
-                  style={{ flex: 1 }}
-                  onPress={() => copy(invitationLink(group.code))}
+                  style={{ flexGrow: 1, flexBasis: 116 }}
+                  onPress={() => copy(invitationLink(active.code))}
                 />
               </Row>
             </Card>
           )}
-          <Button
-            title={t("fillMyCalendar")}
-            icon="calendar-outline"
-            onPress={() => router.navigate("/(tabs)/calendar")}
-          />
-          <Row>
+          <Row style={{ gap: 8, flexWrap: "wrap" }}>
             <Button
-              title={t("addAnotherGroup")}
+              title={t("createGroup")}
               icon="add"
               kind="secondary"
-              style={{ flex: 1 }}
+              style={{ flexGrow: 1, flexBasis: 132 }}
               disabled={busy}
               onPress={() => setOverlay({ kind: "createGroup" })}
             />
@@ -146,72 +111,56 @@ export default function Groups() {
               title={t("joinGroup")}
               icon="enter-outline"
               kind="secondary"
-              style={{ flex: 1 }}
+              style={{ flexGrow: 1, flexBasis: 132 }}
               disabled={busy}
               onPress={() => setOverlay({ kind: "joinGroup" })}
             />
           </Row>
-          {p.items.map((item) => (
-            <Press
-              key={item.id}
-              label={
-                item.name +
-                (item.id === group?.id ? ", " + t("activeGroup") : "")
-              }
-              selected={item.id === group?.id}
-              disabled={busy}
-              onPress={() =>
-                void switchGroup(item.id)
-                  .then(() => router.navigate("/(tabs)"))
-                  .catch(() => {})
-              }
-              style={{ borderRadius: 26 }}
-            >
-              <Card
-                style={{
-                  borderColor:
-                    item.id === group?.id ? colors.accent : colors.glassLine,
-                  gap: 18,
-                }}
-              >
-                <Row between>
-                  <View style={{ flex: 1, gap: 5 }}>
-                    <Txt heading size={23} weight="semibold">
-                      {item.name}
-                    </Txt>
-                    <Txt muted size={12}>
-                      {item.memberCount} {t("members")}
-                    </Txt>
+          {(list.items.length > 0 || moreGroups) && (
+            <Card>
+              {list.items.map((item, index) => {
+                const selected = item.id === group?.id;
+                return (
+                  <View key={item.id}>
+                    {index > 0 && <Divider />}
+                    <Press
+                      selected={selected}
+                      disabled={busy}
+                      onPress={() =>
+                        void switchGroup(item.id)
+                          .then(() => router.navigate("/(tabs)"))
+                          .catch(() => {})
+                      }
+                    >
+                      <Row between style={{ paddingVertical: 12 }}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Txt size={16} weight="semibold">
+                            {item.name}
+                          </Txt>
+                          <Txt muted size={13}>
+                            {item.memberCount} {t("members")}
+                            {selected && " · " + t("demoBadge")}
+                          </Txt>
+                        </View>
+                        <Icon name="chevron-forward" color={colors.muted} />
+                      </Row>
+                    </Press>
                   </View>
-                  <Icon name="arrow-forward" color={colors.accent} />
-                </Row>
-                {item.id === group?.id && (
-                  <Row style={{ gap: 6 }}>
-                    {group.members.slice(0, 5).map((member) => (
-                      <Avatar key={member.id} person={member} size={34} />
-                    ))}
-                    <Txt muted size={12}>
-                      {t(demoMode ? "demoBadge" : "activeGroup")}
-                    </Txt>
-                  </Row>
-                )}
-              </Card>
-            </Press>
-          ))}
-          <Pager page={p.page} pages={p.pages} onPage={setPage} />
-          {moreGroups && (
-            <Button
-              title={t("loadMore")}
-              kind="secondary"
-              onPress={() => void loadMoreGroups().catch(() => {})}
-              disabled={busy}
-            />
+                );
+              })}
+              <Pager page={list.page} pages={list.pages} onPage={setPage} />
+              {moreGroups && (
+                <Button
+                  title={t("loadMore")}
+                  kind="text"
+                  onPress={() => void loadMoreGroups().catch(() => {})}
+                  disabled={busy}
+                />
+              )}
+            </Card>
           )}
         </>
       )}
-      <Txt size={11} muted style={{ textAlign: "center" }}>
-        {t("privacy")}
-      </Txt>
     </Screen>
   );
 }

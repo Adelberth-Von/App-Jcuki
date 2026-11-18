@@ -1,17 +1,12 @@
 import React, { useRef, useState } from "react";
-import { Keyboard, Modal, TextInput, View } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { Keyboard, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp } from "../store";
 import { font } from "../theme";
-import { AmbientBackground, GlassSurface } from "../components/glass";
-import { Brand, Button, Icon, IconButton, Row, Txt } from "../components/ui";
+import { Brand, Button, IconButton, Row, Txt } from "../components/ui";
 import { loginAccount, registerAccount } from "./actions";
 import { useAuth } from "./provider";
-import { useReducedMotion } from "../hooks/useReducedMotion";
 import { FormInput, FormScroll } from "../components/keyboard";
 import {
   accountError,
@@ -19,14 +14,12 @@ import {
   type AccountFields,
 } from "./validation";
 export function AuthScreen({ register = false }: { register?: boolean }) {
-  const { t, colors, prefs, updatePrefs, enterDemo } = useApp(),
-    insets = useSafeAreaInsets();
+  const { t, colors, prefs, updatePrefs, enterDemo } = useApp();
   const { invite, email: initialEmail } = useLocalSearchParams<{
     invite?: string;
     email?: string;
   }>();
   const { setPendingInvite } = useAuth();
-  const reduced = useReducedMotion();
   const [fields, setFields] = useState<AccountFields>({
     fullName: "",
     nickname: "",
@@ -39,14 +32,15 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
     >({}),
     [pending, setPending] = useState(false),
     [show, setShow] = useState<Record<string, boolean>>({}),
+    [focused, setFocused] = useState<keyof AccountFields>(),
     [feedback, setFeedback] = useState("");
+  const submitting = useRef(false);
   const refs = useRef<Partial<Record<keyof AccountFields, TextInput | null>>>(
     {},
   );
   const rows: {
     key: keyof AccountFields;
     label: string;
-    icon: React.ComponentProps<typeof Icon>["name"];
     password?: boolean;
   }[] = [
     ...(register
@@ -54,20 +48,17 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
           {
             key: "fullName" as const,
             label: "authFullName",
-            icon: "person-outline" as const,
           },
           {
             key: "nickname" as const,
             label: "nickname",
-            icon: "at-outline" as const,
           },
         ]
       : []),
-    { key: "email", label: "authEmail", icon: "mail-outline" },
+    { key: "email", label: "authEmail" },
     {
       key: "password",
       label: "authPassword",
-      icon: "lock-closed-outline",
       password: true,
     },
     ...(register
@@ -75,22 +66,26 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
           {
             key: "confirmPassword" as const,
             label: "authConfirmPassword",
-            icon: "shield-checkmark-outline" as const,
             password: true,
           },
         ]
       : []),
   ];
+  const shouldLogIn = ["authEmailExists", "authCreatedLoginFailed"].includes(
+    feedback,
+  );
   async function submit() {
-    if (pending) return;
+    if (submitting.current) return;
+    setFeedback("");
     const invalid = validateAccount(fields, register);
     setErrors(invalid);
     const first = rows.find((row) => invalid[row.key]);
     if (first) {
-      refs.current[first.key]?.focus();
       setFeedback("authCheckFields");
+      refs.current[first.key]?.focus();
       return;
     }
+    submitting.current = true;
     setPending(true);
     Keyboard.dismiss();
     if (invite) setPendingInvite(invite);
@@ -101,26 +96,40 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
     } catch (error) {
       setFeedback(accountError(error));
     } finally {
+      submitting.current = false;
+      setPending(false);
+    }
+  }
+  async function openDemo() {
+    if (submitting.current) return;
+    submitting.current = true;
+    setPending(true);
+    setFeedback("");
+    try {
+      await enterDemo(fields.nickname || undefined);
+      router.replace("/(tabs)");
+    } catch {
+      setFeedback("authTryAgain");
+    } finally {
+      submitting.current = false;
       setPending(false);
     }
   }
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AmbientBackground />
       <FormScroll
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom, 20) + 20,
+          paddingHorizontal: 20,
+          paddingVertical: 16,
           width: "100%",
           maxWidth: 510,
           alignSelf: "center",
           flexGrow: 1,
         }}
       >
-        <Row between style={{ minHeight: 58 }}>
+        <Row between style={{ minHeight: 48 }}>
           <Brand />
           <Button
             title={prefs.language === "id" ? "EN" : "ID"}
@@ -132,80 +141,61 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
             }
           />
         </Row>
-        <View style={{ marginTop: 26, marginBottom: 26, gap: 12 }}>
-          <Row>
-            <View
-              style={{
-                height: 34,
-                width: 34,
-                borderRadius: 17,
-                backgroundColor: colors.accentSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon
-                name={register ? "sparkles-outline" : "leaf-outline"}
-                size={17}
-                color={colors.accent}
-              />
-            </View>
-            <Txt color={colors.accent} weight="semibold" size={12}>
-              {t("authEyebrow")}
-            </Txt>
-          </Row>
+        <View style={{ marginTop: 24, marginBottom: 24, gap: 8 }}>
           <Txt
             heading
-            size={register ? 34 : 38}
+            size={32}
             weight="semibold"
-            style={{ letterSpacing: -1.5, lineHeight: register ? 40 : 45 }}
+            style={{ letterSpacing: -1, lineHeight: 40 }}
           >
             {t(register ? "authRegisterTitle" : "authLoginTitle")}
           </Txt>
-          <Txt muted size={14} style={{ maxWidth: 330 }}>
+          <Txt muted size={15} style={{ maxWidth: 380 }}>
             {t(register ? "authRegisterDescription" : "authLoginDescription")}
           </Txt>
         </View>
-        <GlassSurface style={{ padding: 22, gap: 18 }}>
+        <View style={{ gap: 16 }}>
           {rows.map((row, index) => (
-            <View key={row.key} style={{ gap: 7 }}>
-              <Txt size={12} weight="semibold">
-                {t(row.label)}
-              </Txt>
+            <View key={row.key} style={{ gap: 6 }}>
+              <Txt weight="semibold">{t(row.label)}</Txt>
               <Row
                 style={{
-                  minHeight: 55,
-                  paddingHorizontal: 14,
-                  gap: 10,
-                  borderRadius: 17,
+                  minHeight: 52,
+                  paddingLeft: 12,
+                  paddingRight: row.password ? 0 : 12,
+                  gap: 4,
+                  borderRadius: 12,
                   borderWidth: 1,
                   borderColor: errors[row.key]
                     ? colors.danger
-                    : colors.glassLine,
-                  backgroundColor: colors.glass,
+                    : focused === row.key
+                      ? colors.accent
+                      : colors.controlLine,
+                  backgroundColor: colors.surface,
                 }}
               >
-                <Icon
-                  name={row.icon}
-                  size={19}
-                  color={errors[row.key] ? colors.danger : colors.muted}
-                />
                 <FormInput
                   testID={"auth-" + row.key}
                   ref={(node) => {
                     refs.current[row.key] = node;
                   }}
                   accessibilityLabel={t(row.label)}
+                  accessibilityHint={
+                    errors[row.key]
+                      ? t(errors[row.key]!)
+                      : register && row.key === "password"
+                        ? t("authPasswordHint")
+                        : undefined
+                  }
+                  onFocus={() => setFocused(row.key)}
+                  onBlur={() => setFocused(undefined)}
                   editable={!pending}
                   value={fields[row.key]}
                   onChangeText={(value) => {
                     setFields((old) => ({ ...old, [row.key]: value }));
                     setErrors((old) => ({ ...old, [row.key]: undefined }));
+                    setFeedback("");
                   }}
-                  placeholder={
-                    row.key === "email" ? "you@example.com" : t(row.label)
-                  }
-                  placeholderTextColor={colors.muted}
                   secureTextEntry={row.password && !show[row.key]}
                   autoCapitalize={row.key === "fullName" ? "words" : "none"}
                   autoCorrect={false}
@@ -255,9 +245,9 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
                   style={{
                     flex: 1,
                     minWidth: 0,
-                    minHeight: 53,
+                    minHeight: 50,
                     color: colors.text,
-                    fontSize: 15,
+                    fontSize: 16,
                     fontFamily: font.medium,
                     paddingVertical: 12,
                   }}
@@ -268,29 +258,55 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
                     label={t(
                       show[row.key] ? "authHidePassword" : "authShowPassword",
                     )}
+                    disabled={pending}
                     onPress={() =>
                       setShow((old) => ({ ...old, [row.key]: !old[row.key] }))
                     }
                   />
                 )}
               </Row>
-              {errors[row.key] && (
-                <Txt size={12} color={colors.danger}>
-                  {t(errors[row.key]!)}
+              {errors[row.key] || (register && row.key === "password") ? (
+                <Txt
+                  size={13}
+                  color={errors[row.key] ? colors.danger : colors.muted}
+                >
+                  {t(errors[row.key] || "authPasswordHint")}
                 </Txt>
-              )}
+              ) : null}
             </View>
           ))}
-          {register && (
-            <Txt size={12} muted>
-              {t("authPasswordHint")}
-            </Txt>
+          {feedback && (
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: colors.dangerSoft,
+              }}
+            >
+              <View accessibilityRole="alert">
+                <Txt color={colors.danger}>{t(feedback)}</Txt>
+              </View>
+              {shouldLogIn && (
+                <Button
+                  title={t("authGoToLogin")}
+                  kind="text"
+                  onPress={() =>
+                    router.replace({
+                      pathname: "/login",
+                      params: {
+                        email: fields.email.trim(),
+                        ...(invite ? { invite } : {}),
+                      },
+                    })
+                  }
+                />
+              )}
+            </View>
           )}
           <Button
             title={t(
               pending ? "authWorking" : register ? "authRegister" : "authLogin",
             )}
-            icon={pending ? "time-outline" : "arrow-forward"}
             disabled={pending}
             onPress={() => void submit()}
           />
@@ -310,96 +326,18 @@ export function AuthScreen({ register = false }: { register?: boolean }) {
               }
             />
           </Row>
-        </GlassSurface>
-        <View style={{ marginTop: 20, gap: 8 }}>
+        </View>
+        <View
+          style={{ borderTopWidth: 1, borderColor: colors.line, paddingTop: 8 }}
+        >
           <Button
             title={t("demoEntry")}
             kind="text"
-            icon="flask-outline"
             disabled={pending}
-            onPress={() =>
-              void enterDemo(fields.nickname || undefined)
-                .then(() => router.replace("/(tabs)"))
-                .catch(() => setFeedback("authTryAgain"))
-            }
+            onPress={() => void openDemo()}
           />
-          <Row style={{ justifyContent: "center", gap: 6 }}>
-            <Icon name="lock-closed-outline" size={13} color={colors.muted} />
-            <Txt muted size={12}>
-              {t("authPrivateHint")}
-            </Txt>
-          </Row>
         </View>
       </FormScroll>
-      <Modal
-        visible={!!feedback}
-        transparent
-        animationType={reduced ? "none" : "fade"}
-        onRequestClose={() => setFeedback("")}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "#091C18AA",
-            justifyContent: "center",
-            padding: 26,
-          }}
-        >
-          <GlassSurface
-            style={{
-              maxWidth: 400,
-              width: "100%",
-              alignSelf: "center",
-              padding: 26,
-              gap: 18,
-              backgroundColor: colors.surface,
-            }}
-          >
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                backgroundColor: colors.dangerSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon
-                name="alert-circle-outline"
-                size={29}
-                color={colors.danger}
-              />
-            </View>
-            <Txt heading size={25} weight="semibold">
-              {t("authErrorTitle")}
-            </Txt>
-            <Txt muted>{t(feedback)}</Txt>
-            <Button
-              title={t(
-                ["authEmailExists", "authCreatedLoginFailed"].includes(feedback)
-                  ? "authGoToLogin"
-                  : "authCheckAgain",
-              )}
-              onPress={() => {
-                if (
-                  ["authEmailExists", "authCreatedLoginFailed"].includes(
-                    feedback,
-                  )
-                )
-                  router.replace({
-                    pathname: "/login",
-                    params: {
-                      email: fields.email.trim(),
-                      ...(invite ? { invite } : {}),
-                    },
-                  });
-                setFeedback("");
-              }}
-            />
-          </GlassSurface>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

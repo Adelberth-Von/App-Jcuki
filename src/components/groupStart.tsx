@@ -4,18 +4,26 @@ import { useApp } from "../store";
 import { Button, Card, Icon, Row, Txt } from "./ui";
 
 export function GroupStart() {
-  const { t, colors, syncStatus, refreshing, refresh, setOverlay, demoMode } =
-    useApp();
+  const {
+    t,
+    colors,
+    syncStatus,
+    refreshing,
+    refresh,
+    setOverlay,
+    demoMode,
+    busy,
+  } = useApp();
   if (!demoMode && syncStatus !== "ready")
     return (
-      <Card>
+      <Card style={{ gap: 16 }}>
         <Row>
           {syncStatus === "loading" ? (
             <ActivityIndicator color={colors.accent} />
           ) : (
             <Icon name="cloud-offline-outline" color={colors.peachText} />
           )}
-          <View style={{ flex: 1, gap: 6 }}>
+          <View style={{ flex: 1, gap: 4 }}>
             <Txt weight="semibold">
               {t(syncStatus === "loading" ? "syncLoading" : "syncFailed")}
             </Txt>
@@ -28,8 +36,8 @@ export function GroupStart() {
         </Row>
         {syncStatus === "error" && (
           <Button
-            style={{ marginTop: 18 }}
             title={t("retry")}
+            kind="secondary"
             disabled={refreshing}
             onPress={() => void refresh()}
           />
@@ -37,67 +45,28 @@ export function GroupStart() {
       </Card>
     );
   return (
-    <Card style={{ padding: 24, gap: 20 }}>
-      <View style={{ gap: 9 }}>
-        <Row style={{ alignItems: "flex-start" }}>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              backgroundColor: colors.accentSoft,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="people-outline" size={24} color={colors.accent} />
-          </View>
-          <Txt heading weight="semibold" size={24} style={{ flex: 1 }}>
-            {t("startTogether")}
-          </Txt>
-        </Row>
+    <Card style={{ gap: 16 }}>
+      <View style={{ gap: 4 }}>
+        <Txt heading weight="semibold" size={20}>
+          {t("startTogether")}
+        </Txt>
         <Txt muted size={14}>
           {t("startTogetherHint")}
         </Txt>
       </View>
-      <View style={{ gap: 12 }}>
-        <Button
-          title={t("createGroup")}
-          icon="add"
-          onPress={() => setOverlay({ kind: "createGroup" })}
-        />
-        <Button
-          title={t("joinWithCode")}
-          icon="link-outline"
-          kind="secondary"
-          onPress={() => setOverlay({ kind: "joinGroup" })}
-        />
-      </View>
-      <View style={{ gap: 14 }}>
-        {(["groupStepOne", "groupStepTwo", "groupStepThree"] as const).map(
-          (key, i) => (
-            <Row key={key} style={{ gap: 12 }}>
-              <View
-                style={{
-                  height: 26,
-                  width: 26,
-                  borderRadius: 13,
-                  backgroundColor: colors.accentSoft,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Txt color={colors.accent} size={12} weight="semibold">
-                  {i + 1}
-                </Txt>
-              </View>
-              <Txt size={13} muted style={{ flex: 1 }}>
-                {t(key)}
-              </Txt>
-            </Row>
-          ),
-        )}
-      </View>
+      <Button
+        title={t("createGroup")}
+        icon="add"
+        disabled={busy}
+        onPress={() => setOverlay({ kind: "createGroup" })}
+      />
+      <Button
+        title={t("joinWithCode")}
+        icon="link-outline"
+        kind="secondary"
+        disabled={busy}
+        onPress={() => setOverlay({ kind: "joinGroup" })}
+      />
     </Card>
   );
 }

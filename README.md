@@ -32,19 +32,19 @@ Permintaan aplikasi diarahkan ke Tokyo, dekat database. Pada sampel terkontrol, 
 
 Formulir mengikuti kolom yang sedang diketik ketika keyboard terbuka. Foto privat dimuat dengan sesi akun dan disimpan per akun, sehingga tetap tersedia sesudah refresh/restart dan saat offline. Alur grup memakai halaman buat/gabung khusus, kode yang langsung terlihat, dan tombol berbagi. Status sinkronisasi serta email akun tampil jelas untuk login dari HP lain.
 
-### Akun dan tampilan kaca
+### Akun dan tampilan aplikasi
 
 **Akun langsung aktif, tersimpan di Supabase.** Daftar dengan nama lengkap, nickname, email, password, dan konfirmasi password. Setelah berhasil, aplikasi langsung masuk tanpa mengirim email verifikasi. Login di perangkat lain memulihkan profil, grup, jadwal, dan rencana akun yang sama. Password dikelola dan di-hash oleh Supabase Auth; konfirmasi password tidak disimpan.
 
-**Liquid navigation dan tampilan kaca:** navigasi kapsul mengambang dengan indikator bergerak, kartu transparan, gradasi lembut, Light/Dark/System, serta halaman login, pendaftaran, dan akun baru. iOS 26+ memakai Liquid Glass native ketika tersedia; Android 13+ memakai blur pada navigasi dan lapisan transparan ringan untuk kartu. Reduce Motion dan Reduce Transparency dihormati. [Keputusan desain](docs/UX-DESIGN.md).
+**Tampilan ringkas.** Empat tab tetap di bagian bawah. Beranda menonjolkan libur terdekat dan rencana bersama. Kalender menunjukkan detail tanggal sebelum kamu mengisi libur atau jam bermain. Tema Terang, Gelap, dan Sistem tersedia di Pengaturan. [Keputusan desain](docs/UX-DESIGN.md)
 
 Server Supabase tetap menjadi koneksi bawaan. Zona waktu otomatis mengikuti perangkat, undangan menyediakan kode/link yang bisa disalin, dan demo memiliki tombol kembali. [Panduan akun dan server](docs/SUPABASE.md).
 
 ## Apa yang diperbaiki
 
 - **Identitas baru:** tiga teman mengelilingi jam, loading dengan gerak napas lembut dan transisi masuk. Tidak ada waktu tunggu buatan; animasi mengikuti Reduce Motion.
-- **Akun dan profil:** pendaftaran lima isian, login dengan pop-up kesalahan, sesi tersimpan, halaman Akun saya untuk mengubah nama/nickname/foto dari galeri, serta keluar akun. Mode contoh dapat dicoba tanpa akun.
-- **Desain hangat:** krem, hijau lumut, kontras yang nyaman, hierarki teks jelas, kartu lebih lega, tombol utama mudah dijangkau. Light, Dark, atau System dengan preview tampilan.
+- **Akun dan profil.** Daftar dengan lima isian. Pesan kesalahan muncul di formulir. Buka Akun saya untuk mengubah nama, nickname, atau foto, serta keluar dari akun.
+- **Tampilan.** Permukaan polos, warna hijau Jcuki, dan kontras teks yang tetap terjaga pada kedua tema.
 - **Kalender mingguan sebagai awal:** tampilan bulanan tetap tersedia. Satu editor untuk konfirmasi libur dan jam opsional, pilihan cepat Sore/Malam/Larut malam, lintas tengah malam, ringkasan durasi, dan beberapa rentang per hari.
 - **Waktu tiap pengguna:** zona IANA otomatis dari OS. Jam sesi dikonversi ke zona pembaca; DST Berlin dan offset setengah jam ditangani. Tidak memakai GPS.
 - **Kabar lingkaran:** ikon lonceng, riwayat aktivitas, status belum dibaca, filter jadwal/rencana, dan pagination. Push aktivitas untuk anggota lain disiapkan di backend dengan opt-out, antrean, retry dan receipt.
@@ -56,7 +56,7 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 ## Panduan pemakaian
 
 1. Ketuk **Buat akun**. Isi nama lengkap, nickname, email, password minimal delapan karakter, dan konfirmasi password. Setelah berhasil, akun langsung aktif dan aplikasi masuk; tidak ada email verifikasi.
-2. Untuk akun yang sudah ada, gunakan **Masuk**. Email/password salah menampilkan pop-up; data akun tidak ditimpa. **Coba contoh · tanpa membuat akun** hanya membuka data contoh dan **Keluar demo** membawa kembali ke login.
+2. Untuk akun yang sudah ada, gunakan **Masuk**. Jika email atau password salah, periksa pesan di formulir. **Coba demo** membuka data contoh tanpa membuat akun. Pilih **Keluar demo** untuk kembali ke layar masuk.
 3. Ketuk avatar atau **Pengaturan → Akun saya** untuk mengubah profil dan foto galeri. Keluar akun lalu masuk dengan akun yang sama di perangkat lain untuk memulihkan data. Tidak perlu memasukkan URL server atau API key.
 4. Setelah akun tersinkron, pilih **Buat grup** atau **Gabung grup**. Formulir terbuka di halaman khusus. Setelah grup dibuat, kode dan tombol **Bagikan undangan** langsung muncul; kode/link juga dapat disalin. Teman memilih **Gabung grup**, menempelkan kode/link, lalu menekan tombol bergabung. Berikutnya pilih **Isi kalender saya**. Mendukung tiga pengguna atau lebih dan beberapa lingkaran.
 5. Saat roster keluar, buka **Kalender**, pilih tanggal, lalu konfirmasi libur. Nyalakan **Isi jam bermain sekarang** jika jamnya diketahui, isi mulai/selesai, dan simpan sekali. Memilih tanggal saja tidak menyimpan apa pun.
@@ -67,7 +67,7 @@ Lihat [catatan keputusan UX](docs/UX-DESIGN.md). Tidak ada chat internal. Hari b
 
 ## Tampilan setiap layar
 
-Alur awal dan undangan terbaru:
+Gambar di bawah diambil dari pratinjau versi 1.6.1 dan versi sebelumnya.
 
 <p>
 <img src="docs/preview/first-group.png" alt="Panduan awal membuat atau bergabung ke grup" width="190" />

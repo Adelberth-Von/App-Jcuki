@@ -1,14 +1,13 @@
 import { supabase } from "./client";
+import { API_URL } from "./config";
 import type { AccountFields } from "./validation";
 import { getDeviceTimeZone } from "../services/preferences";
 import { withFunctionRegion } from "../lib/functionRegion";
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL?.trim() ||
-  "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki";
 export async function registerAccount(fields: AccountFields) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
   let response: Response;
+  let body: { created?: boolean; error?: string } | null;
   try {
     response = await fetch(
       withFunctionRegion(API_URL.replace(/\/+$/, "") + "/auth/register"),
@@ -19,13 +18,16 @@ export async function registerAccount(fields: AccountFields) {
         signal: controller.signal,
       },
     );
+    body = await response.json().catch((error) => {
+      if (controller.signal.aborted) throw error;
+      return null;
+    });
   } finally {
     clearTimeout(timer);
   }
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok)
+  if (!response.ok || body?.created !== true)
     throw Object.assign(new Error("Account registration failed"), {
-      code: body.error,
+      code: body?.error,
       status: response.status,
     });
   try {

@@ -1,5 +1,6 @@
 import { useAuth } from "./auth/provider";
 import { supabase, accountAccessToken } from "./auth/client";
+import { API_URL } from "./auth/config";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, {
@@ -161,9 +162,6 @@ const Context = createContext<AppContextValue | null>(null),
 const ColorsContext = createContext<Colors>(lightColors);
 export const useColors = () => useContext(ColorsContext);
 const defaultProfile: Profile = { id: "local", nickname: "", zone: "UTC" };
-const environmentApiUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim() ||
-  "https://chzyuktjcyrpbdwvdgsc.supabase.co/functions/v1/jcuki";
 const errors: Record<string, string> = {
   DST_GAP: "dstGap",
   DST_AMBIGUOUS: "dstAmbiguous",
@@ -248,8 +246,8 @@ export function AppProvider({
       () => initialPreferences || getDefaultPreferences(),
     ),
     [profile, setProfile] = useState(defaultProfile);
-  const [demoMode, setDemoMode] = useState(!environmentApiUrl),
-    [apiUrl, setApiUrl] = useState(environmentApiUrl);
+  const [demoMode, setDemoMode] = useState(!API_URL),
+    [apiUrl, setApiUrl] = useState(API_URL);
   const [groups, setGroups] = useState<GroupSummary[]>([]),
     [group, setGroup] = useState<Group | null>(null),
     [demoGroups, setDemoGroups] = useState<Group[]>([]);
@@ -274,6 +272,7 @@ export function AppProvider({
     timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gate = useRef(createOperationGate()),
     mounted = useRef(true),
+    preferredGroupId = useRef<string | null>(null),
     refreshingTask = useRef<{ ticket: number; promise: Promise<void> } | null>(
       null,
     );
@@ -342,10 +341,11 @@ export function AppProvider({
     [zone, prefs.language],
   );
   const reportError = useCallback(
-    (error: unknown) => {
+    (error: unknown, silent = false) => {
       const code = error instanceof Error ? error.message : "SERVER_ERROR";
       if (code === "BUSY") return;
       setOffline(error instanceof APIError && error.status === 0);
+      if (silent) return;
       if (code === "RATE_LIMITED")
         notify(
           prefs.language === "id"
@@ -366,13 +366,13 @@ export function AppProvider({
   );
   const requireApi = useCallback((): APIClient => {
     if (!api) {
-      router.push("/login");
+      if (!accountId) router.push("/login");
       throw new Error("API_NOT_CONNECTED");
     }
     return api;
-  }, [api]);
+  }, [api, accountId]);
   const run = useCallback(
-    async <T,>(job: () => Promise<T>): Promise<T> => {
+    async <T,>(job: () => Promise<T>, silent = false): Promise<T> => {
       const ticket = gate.current.startMutation();
       if (ticket === null) throw new Error("BUSY");
       setBusy(true);
@@ -382,7 +382,7 @@ export function AppProvider({
         if (mounted.current) setOffline(false);
         return result;
       } catch (error) {
-        if (mounted.current) reportError(error);
+        if (mounted.current) reportError(error, silent);
         throw error;
       } finally {
         gate.current.finishMutation();
@@ -459,7 +459,7 @@ export function AppProvider({
       if (authUser) saved.demoMode = false;
       else if (!saved.demoMode) saved = {};
       const mode = {
-          ...resolveWorkspaceMode(saved, environmentApiUrl, !!authUser),
+          ...resolveWorkspaceMode(saved, API_URL, !!authUser),
           demoMode: !authUser && saved.demoMode === true,
         },
         pending =
@@ -517,6 +517,8 @@ export function AppProvider({
             null,
         );
       } else {
+        preferredGroupId.current =
+          typeof saved.activeGroup === "string" ? saved.activeGroup : null;
         setGroups(Array.isArray(saved.groups) ? saved.groups : []);
         setGroup(
           saved.cachedGroup &&
@@ -554,7 +556,7 @@ export function AppProvider({
       widgetEnabled,
       demoGroups,
       groups,
-      activeGroup: group?.id,
+      activeGroup: preferredGroupId.current || group?.id,
       cachedGroup: demoMode ? null : group,
       pendingPhotoUri,
       reminderEvents,
@@ -633,17 +635,23 @@ export function AppProvider({
       if (demoMode || gate.current.busy) return;
       if (!api) {
         setSyncStatus("error");
-        reportError(new Error("API_NOT_CONNECTED"));
+        reportError(new Error("API_NOT_CONNECTED"), silent);
         return;
       }
       if (
         refreshingTask.current &&
         gate.current.isCurrent(refreshingTask.current.ticket)
-      )
+      ) {
+        if (!silent) setRefreshing(true);
         return refreshingTask.current.promise;
+      }
       const ticket = gate.current.startRefresh();
       if (ticket === null) return;
       const current = () => mounted.current && gate.current.isCurrent(ticket);
+      const preferred = preferredGroupId.current;
+      const minimum =
+        groups.length +
+        (preferred && !groups.some((item) => item.id === preferred) ? 1 : 0);
       if (!silent) setRefreshing(true);
       const task = (async () => {
         try {
@@ -653,32 +661,35 @@ export function AppProvider({
             api.listGroups({ limit: 20 }),
           ]);
           if (!current()) return;
-          const page = await readPageWindow(
-            firstPage,
-            groups.length,
-            (cursor) => api.listGroups({ cursor, limit: 20 }),
+          const page = await readPageWindow(firstPage, minimum, (cursor) =>
+            api.listGroups({ cursor, limit: 20 }),
           );
-          const selectedId = group?.id || page.items[0]?.id;
+          if (!current()) return;
+          const selectedId = preferred || group?.id || page.items[0]?.id;
           let selected: Group | null = null;
           if (selectedId) {
             try {
               selected = await api.getGroup(selectedId);
             } catch (error) {
               if (
-                error instanceof APIError &&
-                ["NO_PERMISSION", "NOT_FOUND"].includes(error.code)
+                !(error instanceof APIError) ||
+                !["NO_PERMISSION", "NOT_FOUND", "GROUP_NOT_FOUND"].includes(
+                  error.code,
+                )
               )
-                selected =
-                  page.items[0] && page.items[0].id !== selectedId
-                    ? await api.getGroup(page.items[0].id)
-                    : null;
-              else throw error;
+                throw error;
+              if (!current()) return;
+              const fallback = page.items.find(
+                (item) => item.id !== selectedId,
+              );
+              if (fallback) selected = await api.getGroup(fallback.id);
             }
           }
           if (!current()) return;
           if (selected)
             selected = await refreshGroupWindow(api, selected, group);
           if (!current()) return;
+          preferredGroupId.current = null;
           const canonical = pendingPhotoUri
             ? { ...remote, avatarUri: pendingPhotoUri }
             : remote;
@@ -701,7 +712,7 @@ export function AppProvider({
         } catch (error) {
           if (current()) {
             setSyncStatus("error");
-            reportError(error);
+            reportError(error, silent);
           }
         } finally {
           if (current()) setRefreshing(false);
@@ -824,7 +835,7 @@ export function AppProvider({
       throw new Error("invalidNickname");
     }
     await run(async () => {
-      const client = demoMode || !api ? null : requireApi();
+      const client = demoMode ? null : requireApi();
       let next = client
         ? await client.upsertProfile({
             nickname,
@@ -853,6 +864,7 @@ export function AppProvider({
     });
   }
   async function commitDemo(nickname?: string) {
+    preferredGroupId.current = null;
     setReminderEvents([]);
     const localPhoto = await getProfilePhoto(photoScope),
       next = {
@@ -878,6 +890,7 @@ export function AppProvider({
   }
   async function exitDemo() {
     await run(async () => {
+      preferredGroupId.current = null;
       setReminderEvents([]);
       setGroup(null);
       setGroups([]);
@@ -886,7 +899,7 @@ export function AppProvider({
       setOnboarded(!!authUser);
       setOverlay(null);
       setOffline(false);
-      setApiUrl(apiUrl || environmentApiUrl);
+      setApiUrl(apiUrl || API_URL);
     });
   }
   async function choosePhoto() {
@@ -957,6 +970,7 @@ export function AppProvider({
       const selected = demoMode
         ? demoGroups.find((item) => item.id === id) || null
         : await requireApi().getGroup(id);
+      preferredGroupId.current = null;
       setGroup(selected);
     });
   }
@@ -968,47 +982,38 @@ export function AppProvider({
     }
     return requireApi();
   }
-  async function createGroup(name: string) {
+  async function saveMembership(
+    write: (client: APIClient) => Promise<GroupSummary>,
+    success: string,
+  ) {
     await run(async () => {
-      const client = requireCloud(),
-        item = await client.createGroup(name.trim());
-      const [remote, selected] = await Promise.all([
-        client.getProfile(),
-        client.getGroup(item.id),
-      ]);
-      applyOwnProfile(
-        pendingPhotoUri ? { ...remote, avatarUri: pendingPhotoUri } : remote,
-      );
+      const item = await write(requireCloud());
+      // The membership is saved even if loading the group's schedule fails.
+      preferredGroupId.current = item.id;
       setGroups((list) => [
         item,
         ...list.filter((existing) => existing.id !== item.id),
       ]);
-      setGroup(selected);
       setOverlay(null);
-      markSynced();
-      notify("groupCreated");
-    });
+      if (group?.id !== item.id) {
+        setGroup(null);
+        setSyncStatus("loading");
+      }
+      notify(success);
+    }, true);
+    void refresh(true);
   }
-  async function joinGroup(code: string) {
-    await run(async () => {
-      const client = requireCloud(),
-        item = await client.joinGroup(code.trim());
-      const [remote, selected] = await Promise.all([
-        client.getProfile(),
-        client.getGroup(item.id),
-      ]);
-      applyOwnProfile(
-        pendingPhotoUri ? { ...remote, avatarUri: pendingPhotoUri } : remote,
-      );
-      setGroups((list) => [
-        item,
-        ...list.filter((existing) => existing.id !== item.id),
-      ]);
-      setGroup(selected);
-      setOverlay(null);
-      markSynced();
-      notify("groupJoined");
-    });
+  function createGroup(name: string) {
+    return saveMembership(
+      (client) => client.createGroup(name.trim()),
+      "groupCreated",
+    );
+  }
+  function joinGroup(code: string) {
+    return saveMembership(
+      (client) => client.joinGroup(code.trim()),
+      "groupJoined",
+    );
   }
   async function saveDaySchedule(
     day: string,
@@ -1292,6 +1297,7 @@ export function AppProvider({
         }
       }
       // State changes only after profile, memberships and selected group have all loaded.
+      preferredGroupId.current = null;
       setApiUrl(client.baseUrl);
       setReminderEvents([]);
       setDemoMode(false);

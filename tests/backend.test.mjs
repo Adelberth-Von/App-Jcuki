@@ -9,6 +9,59 @@ import {
   future,
 } from "./helpers/backend.mjs";
 
+test("health requires a database with the account and calendar schema", async (t) => {
+  const env = environment();
+  t.after(() => env.sqlite.close());
+
+  assert.deepEqual(await call(env, "", "/health"), {
+    status: 200,
+    data: { service: "JCuki API", version: 1 },
+  });
+  assert.deepEqual(await call({ ...env, DB: null }, "", "/health"), {
+    status: 503,
+    data: { error: "BACKEND_NOT_CONFIGURED" },
+  });
+
+  env.sqlite.exec(
+    "ALTER TABLE profiles RENAME COLUMN auth_user_id TO missing_auth_user_id",
+  );
+  assert.deepEqual(await call(env, "", "/health"), {
+    status: 503,
+    data: { error: "DATABASE_UNAVAILABLE" },
+  });
+});
+
+test("retrying a group invitation during another join creates one membership and activity", async (t) => {
+  const env = environment();
+  t.after(() => env.sqlite.close());
+  await register(env, tokens[0]);
+  await register(env, tokens[1], 1);
+  const group = (
+    await call(env, tokens[0], "/api/groups", "POST", { name: "Invite retry" })
+  ).data;
+  const join = () =>
+    call(env, tokens[1], "/api/join", "POST", { code: group.code });
+  const saveBatch = env.DB.batch;
+  env.DB.batch = async (statements) => {
+    env.DB.batch = saveBatch;
+    assert.equal((await join()).status, 200);
+    return saveBatch(statements);
+  };
+
+  const result = await join();
+  assert.equal(result.status, 200);
+  assert.equal(result.data.memberCount, 2);
+  const activity = await call(
+    env,
+    tokens[0],
+    `/api/groups/${group.id}/activity`,
+  );
+  assert.deepEqual(
+    activity.data.items.map(({ kind }) => kind),
+    ["member_joined"],
+  );
+});
+
 test("explicit days off sync across members without hours or forged confirmation times", async () => {
   const env = environment();
   const own = await register(env, tokens[0]);
@@ -117,6 +170,42 @@ test("hours never confirm a day; cancelling a day and its hours is atomic", asyn
   assert.deepEqual(member.daysOff, []);
   assert.deepEqual(member.slots, []);
   env.sqlite.close();
+});
+
+test("a day-off update without hours preserves a concurrent availability change", async (t) => {
+  const env = environment();
+  t.after(() => env.sqlite.close());
+  const own = await register(env, tokens[0]);
+  const group = (
+    await call(env, tokens[0], "/api/groups", "POST", {
+      name: "Shared calendar",
+    })
+  ).data;
+  const path = "/api/groups/" + group.id;
+  const slots = [
+    { id: "new-hours", start: future(120), end: future(180), status: "yes" },
+  ];
+  const daysOff = [{ date: future(4320).slice(0, 10), zone: "UTC" }];
+
+  const saveBatch = env.DB.batch;
+  env.DB.batch = async (statements) => {
+    env.DB.batch = saveBatch;
+    assert.equal(
+      (await call(env, tokens[0], path + "/availability", "PUT", { slots }))
+        .status,
+      200,
+    );
+    return saveBatch(statements);
+  };
+  assert.equal(
+    (await call(env, tokens[0], path + "/days-off", "PUT", { daysOff })).status,
+    200,
+  );
+  const member = (await call(env, tokens[0], path)).data.members.find(
+    (item) => item.id === own.id,
+  );
+  assert.deepEqual(member.slots, slots);
+  assert.equal(member.daysOff[0].date, daysOff[0].date);
 });
 
 test("three real identities share availability and confirm; outsiders cannot read or change group", async () => {

@@ -2,6 +2,12 @@
 
 Jcuki membantu lingkaran teman dengan shift yang berubah untuk berbagi hari libur, mengisi jam bermain, dan menyepakati rencana bersama. Percakapan tetap melalui aplikasi yang sudah mereka gunakan.
 
+## Penyederhanaan layar
+
+Empat tab tetap terlihat di bagian bawah saat keyboard tertutup. Kartu memakai permukaan solid dalam tema terang dan gelap. Beranda memprioritaskan libur terdekat, kalender minggu ini, dan rencana yang akan datang.
+
+Di Kalender, ketuk tanggal untuk membaca status libur dan jadwal teman. Gunakan tindakan di detail tanggal untuk menyimpan libur atau jam bermain. Formulir masuk dan daftar menampilkan pesan kesalahan di dekat isian atau tombol kirim.
+
 ## Alur utama
 
 Pada 1.6.0, beranda grup baru memberi satu tindakan berikutnya dan tiga indikator sederhana: Undang, Pilih waktu, Buat rencana. Indikator mengikuti data yang tersimpan, bukan urutan tombol yang pernah ditekan. Kartu selesai tidak memenuhi beranda setelah semua langkah terpenuhi. Undangan di halaman Grup dibuat lebih pendek; area kode bisa ditekan untuk menyalin, dengan Bagikan dan Salin link bersebelahan. Halaman Akun menampilkan perubahan yang belum disimpan dan foto lokal yang belum terunggah secara terpisah dari keberhasilan refresh server.

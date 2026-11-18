@@ -67,8 +67,9 @@ export function useActivity({
     };
   }, [api, group, profileId, prefs, zone, onChange, pushStatus, feed]);
   const epoch = useRef(0);
-  const reload = useRef<() => Promise<void>>(async () => {});
-  const refreshActivity = useCallback(() => reload.current(), []);
+  const pagination = useRef<number | null>(null);
+  const reload = useRef<(requested?: boolean) => Promise<void>>(async () => {});
+  const refreshActivity = useCallback(() => reload.current(true), []);
   const [demoClock] = useState(() => Date.now());
   useEffect(() => {
     if (!api || demoMode || !profileId || profileId === "local") return;
@@ -121,19 +122,21 @@ export function useActivity({
   const groupId = group?.id || "";
   useEffect(() => {
     const ticket = ++epoch.current;
-    if (!groupId) return;
+    if (!groupId || (!api && !demoMode)) return;
     const storage = `@jcuki/activity-read/${profileId}/${groupId}`;
     let running = false,
       baseline: string | undefined;
     let readKey = "";
-    async function load() {
+    async function load(requested = false) {
       if (
         running ||
+        pagination.current === ticket ||
         ticket !== epoch.current ||
         (AppState.currentState !== "active" && Platform.OS !== "web")
       )
         return;
       running = true;
+      if (requested) setFeed((current) => ({ ...current, loading: true }));
       try {
         const info = latest.current;
         const stored =
@@ -143,7 +146,7 @@ export function useActivity({
               items: demoActivity(info.group!, demoClock),
               nextCursor: null,
             }
-          : await info.api!.listActivity(groupId, { limit: 20 });
+          : await api!.listActivity(groupId, { limit: 20 });
         if (ticket !== epoch.current) return;
         const newest = page.items[0] ? activityKey(page.items[0]) : "";
         if (baseline === undefined) {
@@ -163,6 +166,7 @@ export function useActivity({
           )
             void notifyActivity(incoming[0], info.prefs).catch(() => {});
         }
+        if (ticket !== epoch.current) return;
         setFeed((current) => {
           const next = {
             groupId,
@@ -197,7 +201,7 @@ export function useActivity({
       }
     }
     reload.current = load;
-    if (demoMode || api) void load();
+    void load();
     const interval = demoMode
       ? undefined
       : setInterval(() => void load(), 30000);
@@ -221,7 +225,10 @@ export function useActivity({
       notification?.remove();
     };
   }, [api, groupId, profileId, demoMode, demoClock]);
-  const visible = group && feed.groupId === group.id ? feed : empty;
+  const visible =
+    group && feed.groupId === group.id
+      ? feed
+      : { ...empty, loading: !!group && (!!api || demoMode) };
   const markRead = useCallback(() => {
     const current = latest.current;
     if (!current.group || current.feed.groupId !== current.group.id) return;
@@ -241,8 +248,15 @@ export function useActivity({
   async function loadMore() {
     const current = latest.current,
       ticket = epoch.current;
-    if (!current.api || !current.group || !visible.cursor || visible.loading)
+    if (
+      !current.api ||
+      !current.group ||
+      !visible.cursor ||
+      visible.loading ||
+      pagination.current === ticket
+    )
       return;
+    pagination.current = ticket;
     setFeed((old) => ({ ...old, loading: true }));
     try {
       const page = await current.api.listActivity(current.group.id, {
@@ -255,10 +269,13 @@ export function useActivity({
           items: mergeActivity(old.items, page.items),
           cursor: page.nextCursor,
           loading: false,
+          error: false,
         }));
     } catch {
       if (ticket === epoch.current)
         setFeed((old) => ({ ...old, loading: false, error: true }));
+    } finally {
+      if (pagination.current === ticket) pagination.current = null;
     }
   }
   return {

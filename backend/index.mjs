@@ -398,9 +398,18 @@ export async function handleAPI(request, env, context) {
       fail("ORIGIN_NOT_ALLOWED", 403);
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors });
-    if (url.pathname === "/health" && request.method === "GET")
-      return json({ service: "JCuki API", version: 1 }, 200, cors);
     if (!env.DB || !env.RATE_LIMITER) fail("BACKEND_NOT_CONFIGURED", 503);
+    if (url.pathname === "/health" && request.method === "GET") {
+      try {
+        await rows(
+          env.DB,
+          "SELECT p.auth_user_id,m.days_off FROM profiles p CROSS JOIN members m LIMIT 0",
+        );
+      } catch {
+        fail("DATABASE_UNAVAILABLE", 503);
+      }
+      return json({ service: "JCuki API", version: 1 }, 200, cors);
+    }
     if (
       url.pathname === "/auth/register" &&
       request.method === "POST" &&
@@ -686,21 +695,27 @@ export async function handleAPI(request, env, context) {
         fail("GROUP_NOT_FOUND", 404);
       const group = await one(db, "SELECT * FROM groups WHERE code=?", code);
       if (!group) fail("GROUP_NOT_FOUND", 404);
-      const joined = await one(
-        db,
-        "SELECT 1 FROM members WHERE group_id=? AND user_id=?",
-        group.id,
-        uid,
-      );
-      if (!joined)
-        await db.batch([
-          db
-            .prepare(
-              "INSERT INTO members(group_id,user_id,joined_at) VALUES(?,?,?)",
-            )
-            .bind(group.id, uid, nowISO()),
-          ...(await activityStatements(db, group.id, uid, "member_joined")),
-        ]);
+      const membership = () =>
+        one(
+          db,
+          "SELECT 1 FROM members WHERE group_id=? AND user_id=?",
+          group.id,
+          uid,
+        );
+      if (!(await membership())) {
+        try {
+          await db.batch([
+            db
+              .prepare(
+                "INSERT INTO members(group_id,user_id,joined_at) VALUES(?,?,?)",
+              )
+              .bind(group.id, uid, nowISO()),
+            ...(await activityStatements(db, group.id, uid, "member_joined")),
+          ]);
+        } catch (error) {
+          if (!(await membership())) throw error;
+        }
+      }
       context?.waitUntil(deliverPush(env));
       return json(groupShape(await groupRow(db, group.id)), 200, cors);
     }
@@ -792,18 +807,19 @@ export async function handleAPI(request, env, context) {
         body.daysOff,
         JSON.parse(member.days_off),
       );
-      const slots =
+      const savedDays = JSON.stringify(daysOff);
+      const savedSlots =
         body.slots === undefined
-          ? JSON.parse(member.slots)
-          : validateSlots(body.slots);
+          ? null
+          : JSON.stringify(validateSlots(body.slots));
       await db.batch([
         db
           .prepare(
-            "UPDATE members SET days_off=?,slots=? WHERE group_id=? AND user_id=?",
+            "UPDATE members SET days_off=?,slots=COALESCE(?,slots) WHERE group_id=? AND user_id=?",
           )
-          .bind(JSON.stringify(daysOff), JSON.stringify(slots), groupId, uid),
-        ...(JSON.stringify(daysOff) !== member.days_off ||
-        JSON.stringify(slots) !== member.slots
+          .bind(savedDays, savedSlots, groupId, uid),
+        ...(savedDays !== member.days_off ||
+        (savedSlots !== null && savedSlots !== member.slots)
           ? await activityStatements(db, groupId, uid, "schedule_updated")
           : []),
       ]);

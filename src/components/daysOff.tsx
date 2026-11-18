@@ -29,12 +29,14 @@ import { dayText } from "./schedule";
 
 export function CalendarMonth({
   selected,
+  today,
   onSelect,
 }: {
   selected: string;
+  today: string;
   onSelect: (day: string) => void;
 }) {
-  const { colors, t, prefs, group, profile, zone } = useApp();
+  const { colors, t, prefs, group, profile } = useApp();
   const [view, setView] = useState(() => ({
     selection: selected,
     month: selected.slice(0, 7) + "-01",
@@ -45,10 +47,12 @@ export function CalendarMonth({
     setView({ selection: selected, month: next });
   }
   const [width, setWidth] = useState(336);
-  const gridWidth = Math.max(336, width),
-    today = localDate(useMinuteClock(), zone);
-  const confirmed =
-    group?.members.find((m) => m.id === profile.id)?.daysOff || [];
+  const gridWidth = Math.max(336, width);
+  const confirmed = new Set(
+    group?.members
+      .find((m) => m.id === profile.id)
+      ?.daysOff?.map((day) => day.date),
+  );
   const start = weekStart(month),
     anchor = new Date(month + "T12:00:00Z");
   const end = new Date(
@@ -63,12 +67,18 @@ export function CalendarMonth({
     setMonth(d.toISOString().slice(0, 10));
   }
   return (
-    <Card style={{ padding: 0, overflow: "hidden" }}>
-      <Row
-        between
-        style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8 }}
-      >
-        <Txt size={20} weight="bold" heading style={{ flex: 1, marginLeft: 6 }}>
+    <Card style={{ paddingHorizontal: 0, paddingVertical: 4 }}>
+      <Row between style={{ gap: 4, paddingHorizontal: 4, marginBottom: 8 }}>
+        <IconButton
+          icon="chevron-back"
+          label={t("previousMonth")}
+          onPress={() => move(-1)}
+        />
+        <Txt
+          size={14}
+          weight="semibold"
+          style={{ flex: 1, textAlign: "center" }}
+        >
           {dayText(month, prefs.language, {
             month: "long",
             year: "numeric",
@@ -76,25 +86,18 @@ export function CalendarMonth({
             weekday: undefined,
           })}
         </Txt>
-        <Row style={{ gap: 0 }}>
-          <IconButton
-            icon="chevron-back"
-            label={t("previousMonth")}
-            onPress={() => move(-1)}
-          />
-          <IconButton
-            icon="chevron-forward"
-            label={t("nextMonth")}
-            onPress={() => move(1)}
-          />
-        </Row>
+        <IconButton
+          icon="chevron-forward"
+          label={t("nextMonth")}
+          onPress={() => move(1)}
+        />
       </Row>
       <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={gridWidth > width}
         >
-          <View style={{ width: gridWidth, paddingBottom: 10 }}>
+          <View style={{ width: gridWidth }}>
             <Row style={{ gap: 0, marginBottom: 4 }}>
               {Array.from({ length: 7 }, (_, i) => (
                 <View
@@ -113,7 +116,7 @@ export function CalendarMonth({
             </Row>
             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
               {days.map((day) => {
-                const has = confirmed.some((d) => d.date === day),
+                const has = confirmed.has(day),
                   active = day === selected,
                   inMonth = day.slice(0, 7) === month.slice(0, 7),
                   disabled = !inMonth || (day < today && !has);
@@ -132,13 +135,13 @@ export function CalendarMonth({
                     selected={active}
                     disabled={disabled}
                     onPress={() => onSelect(day)}
-                    style={{ width: gridWidth / 7, paddingVertical: 3 }}
+                    style={{ width: gridWidth / 7 }}
                   >
                     <View
                       style={{
-                        minHeight: 54,
+                        minHeight: 48,
                         marginHorizontal: 2,
-                        borderRadius: 14,
+                        borderRadius: 12,
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 2,
@@ -161,8 +164,8 @@ export function CalendarMonth({
                       <View style={{ height: 12 }}>
                         {has ? (
                           <Icon
-                            name="checkmark"
-                            size={12}
+                            name="checkmark-circle-outline"
+                            size={14}
                             color={active ? colors.onAccent : colors.accent}
                           />
                         ) : day === today ? (
@@ -187,12 +190,15 @@ export function CalendarMonth({
           </View>
         </ScrollView>
       </View>
-      <Divider />
-      <Row between style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
-        <Row style={{ gap: 6, flex: 1 }}>
-          <Icon name="checkmark-circle" size={16} color={colors.accent} />
+      <Row between style={{ paddingHorizontal: 12, marginTop: 4 }}>
+        <Row style={{ gap: 8, flex: 1 }}>
+          <Icon
+            name="checkmark-circle-outline"
+            size={16}
+            color={colors.accent}
+          />
           <Txt size={12} muted style={{ flex: 1 }}>
-            {t("calendarLegend")}
+            {t("confirmedDayOff")}
           </Txt>
         </Row>
         <Press
@@ -202,7 +208,7 @@ export function CalendarMonth({
             onSelect(today);
           }}
         >
-          <Txt size={12} weight="semibold" color={colors.accent}>
+          <Txt size={14} weight="semibold" color={colors.accent}>
             {t("today")}
           </Txt>
         </Press>

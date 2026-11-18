@@ -1,8 +1,8 @@
 import React from "react";
-import { GroupStart } from "../../components/groupStart";
-import { GroupJourney } from "../../components/groupJourney";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
+import { GroupJourney } from "../../components/groupJourney";
+import { GroupStart } from "../../components/groupStart";
 import { useApp } from "../../store";
 import {
   localDate,
@@ -12,6 +12,7 @@ import {
 } from "../../lib/domain";
 import { useMinuteClock } from "../../hooks/useMinuteClock";
 import {
+  Button,
   Card,
   Icon,
   Pill,
@@ -21,12 +22,7 @@ import {
   SectionTitle,
   Txt,
 } from "../../components/ui";
-import {
-  AgendaList,
-  dayText,
-  DemoNotice,
-  ReminderCard,
-} from "../../components/schedule";
+import { AgendaList, dayText } from "../../components/schedule";
 import { FriendsSchedule, MyDaysOff } from "../../components/daysOff";
 import { WeekStrip } from "../../components/week";
 
@@ -56,107 +52,55 @@ export default function Dashboard() {
   if (!onboarded) return <Redirect href="/welcome" />;
   if (!group)
     return (
-      <Screen>
-        <View style={{ gap: 9 }}>
-          <Txt heading size={33} weight="semibold" numberOfLines={1}>
-            {t("welcome")}, {profile.nickname}.
-          </Txt>
-          <Txt muted>{t("firstGroupWelcome")}</Txt>
-        </View>
+      <Screen
+        title={`${t("welcome")}, ${profile.nickname}.`}
+        description={t("firstGroupWelcome")}
+      >
         <GroupStart />
       </Screen>
     );
+
   return (
     <Screen>
-      <View style={{ gap: 8 }}>
-        <Row between>
-          <Txt muted size={13} style={{ flex: 1 }}>
+      <View style={{ gap: 4 }}>
+        <Row between style={{ flexWrap: "wrap", gap: 8 }}>
+          <Txt muted size={14}>
             {dayText(today, prefs.language, {
               weekday: "long",
               day: "numeric",
               month: "long",
             })}
           </Txt>
-          <Pill
-            label={
-              offline
-                ? t("offline")
-                : busy
-                  ? t("syncing")
-                  : zoneAbbreviation(zone, now)
-            }
-            tone={offline ? "peach" : "muted"}
-            dot={offline || busy}
-          />
+          {(offline || busy) && !demoMode && (
+            <Pill
+              label={t(offline ? "offline" : "syncing")}
+              tone={offline ? "peach" : "muted"}
+            />
+          )}
         </Row>
-        <Txt
-          size={32}
-          weight="semibold"
-          heading
-          style={{ letterSpacing: -1.3 }}
-        >
+        <Txt heading size={32} weight="semibold" style={{ letterSpacing: -1 }}>
           {t("welcome")}, {profile.nickname}.
         </Txt>
-        <Txt muted size={14}>
-          {t("welcomeDescription")}
-        </Txt>
-      </View>
-      {group && (
         <Press
           label={t("selectGroup") + ": " + group.name}
           onPress={() => router.navigate("/(tabs)/groups")}
-          style={{ alignSelf: "flex-start" }}
+          style={{ alignSelf: "flex-start", maxWidth: "100%" }}
         >
           <Row style={{ gap: 8 }}>
             <Icon name="people-outline" size={18} color={colors.accent} />
-            <Txt size={13} weight="semibold">
+            <Txt size={14} weight="semibold" style={{ flexShrink: 1 }}>
               {group.name}
             </Txt>
-            <Txt size={12} muted>
-              ·{" "}
-              {demoMode
-                ? t("demoBadge")
-                : group.memberCount + " " + t("members")}
-            </Txt>
-            <Icon name="chevron-down" size={15} color={colors.muted} />
+            <Icon name="chevron-forward" size={16} color={colors.muted} />
           </Row>
         </Press>
-      )}
-      <GroupJourney />
-      <Card
-        style={{
-          backgroundColor: colors.hero,
-          borderColor: colors.hero,
-          padding: 24,
-          overflow: "hidden",
-        }}
-      >
-        <View
-          pointerEvents="none"
-          aria-hidden
-          style={{
-            position: "absolute",
-            right: -24,
-            top: -30,
-            width: 150,
-            height: 150,
-            borderRadius: 75,
-            borderWidth: 1,
-            borderColor: colors.heroLine,
-          }}
-        />
-        <Row style={{ gap: 8 }}>
-          <Icon name="sunny-outline" color={colors.heroMuted} size={19} />
-          <Txt size={12} weight="medium" color={colors.heroMuted}>
-            {t("nextDayOff")}
-          </Txt>
-        </Row>
-        <Txt
-          size={28}
-          weight="semibold"
-          color={colors.onHero}
-          style={{ marginTop: 18, letterSpacing: -0.9 }}
-        >
+      </View>
+
+      <Card style={{ gap: 8, backgroundColor: colors.accentSoft }}>
+        <Txt weight="semibold" color={colors.accent} size={14}>
+          {t("nextDayOff")}
+        </Txt>
+        <Txt heading size={25} weight="semibold">
           {next
             ? dayText(next.date, prefs.language, {
                 weekday: "long",
@@ -165,9 +109,9 @@ export default function Dashboard() {
               })
             : t("noConfirmedDays")}
         </Txt>
-        <Txt color={colors.heroMuted} size={14} style={{ marginTop: 7 }}>
-          {next
-            ? slots.length
+        {next && (
+          <Txt muted size={14}>
+            {slots.length
               ? slots
                   .map(
                     (s) =>
@@ -179,19 +123,18 @@ export default function Dashboard() {
                         : ""),
                   )
                   .join(" · ")
-              : t("noPlayTimeYet")
-            : t("noConfirmedDaysDescription")}
-        </Txt>
-        {next && (
-          <Txt color={colors.heroMuted} size={12} style={{ marginTop: 5 }}>
+              : t("noPlayTimeYet")}
+          </Txt>
+        )}
+        {next && next.zone !== zone && (
+          <Txt muted size={12}>
             {t("savedZone")}:{" "}
             {zoneAbbreviation(next.zone, next.date + "T12:00:00Z")}
-            {slots.length
-              ? " · " +
+            {slots.length > 0 &&
+              " · " +
                 t("yourTime") +
                 ": " +
-                zoneAbbreviation(zone, slots[0].start)
-              : ""}
+                zoneAbbreviation(zone, slots[0].start)}
             {slots.length > 0 && localDate(slots[0].start, zone) !== next.date
               ? " · " +
                 dayText(localDate(slots[0].start, zone), prefs.language, {
@@ -201,8 +144,8 @@ export default function Dashboard() {
               : ""}
           </Txt>
         )}
-        <Press
-          label={t(
+        <Button
+          title={t(
             next
               ? slots.length
                 ? "editPlayTime"
@@ -214,31 +157,10 @@ export default function Dashboard() {
               ? setOverlay({ kind: "slot", day: next.date, slot: slots[0] })
               : router.navigate("/(tabs)/calendar")
           }
-          style={{
-            marginTop: 22,
-            backgroundColor: colors.onHero,
-            borderRadius: 16,
-          }}
-        >
-          <Row between style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Txt
-              size={14}
-              weight="semibold"
-              color={colors.hero}
-              style={{ flex: 1 }}
-            >
-              {t(
-                next
-                  ? slots.length
-                    ? "editPlayTime"
-                    : "addPlayTime"
-                  : "chooseDay",
-              )}
-            </Txt>
-            <Icon name="arrow-forward" color={colors.hero} size={19} />
-          </Row>
-        </Press>
+          style={{ marginTop: 8 }}
+        />
       </Card>
+
       <View>
         <SectionTitle
           title={t("thisWeek")}
@@ -248,22 +170,16 @@ export default function Dashboard() {
         <WeekStrip
           week={weekStart(today)}
           selected={today}
+          today={today}
           onSelect={(day) =>
-            router.push({ pathname: "/(tabs)/calendar", params: { day } })
+            router.navigate({ pathname: "/(tabs)/calendar", params: { day } })
           }
         />
-        <Txt size={12} muted style={{ marginTop: 12 }}>
-          {t("weekHint")}
-        </Txt>
       </View>
-      <DemoNotice />
-      <FriendsSchedule />
       <AgendaList />
+      <GroupJourney />
+      <FriendsSchedule />
       {days.length > 1 && <MyDaysOff omitFirst />}
-      <ReminderCard />
-      <Txt muted size={12} style={{ textAlign: "center" }}>
-        {t("signature")}
-      </Txt>
     </Screen>
   );
 }

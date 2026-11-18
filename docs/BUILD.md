@@ -46,7 +46,7 @@ Supply the generated project UUID using `EXPO_PUBLIC_EAS_PROJECT_ID`; the dynami
 
 ## Native feature checks before release
 
-An installed native build is needed to test custom notification audio, system gallery selection, Android uninstall confirmation, and home-screen widgets. Check signup/login/logout, account switching, session persistence, iOS Liquid Glass availability/fallback, Android navigation blur, Reduce Transparency/Reduce Motion, keyboard hiding the floating navigation, notification permission on Android 13+, iOS notification settings, weekly scheduling across Berlin daylight-saving changes, profile persistence after restart, Indonesian/English formatting, text scaling, VoiceOver/TalkBack, and widget snapshots. The web preview validates shared UI only.
+An installed native build is needed to test custom notification audio, system gallery selection, Android uninstall confirmation, and home-screen widgets. Check signup and login errors in the form, account switching, session persistence, Reduce Motion, bottom-tab clearance around the keyboard and system bars, notification permissions, weekly scheduling across Berlin daylight-saving changes, profile persistence after restart, Indonesian and English formatting, text scaling, VoiceOver, TalkBack, and widget snapshots. The web preview validates shared UI.
 
 ## Official references
 

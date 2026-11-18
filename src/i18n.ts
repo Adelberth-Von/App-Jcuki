@@ -1,5 +1,6 @@
 const id: Record<string, string> = {
   profileUnsaved: "Ada perubahan. Ketuk Simpan untuk menyinkronkannya.",
+  profileUpdateFailed: "Profil belum tersimpan. Coba lagi.",
   photoPendingHint:
     "Foto tersimpan di perangkat ini. Unggah agar muncul di perangkat lain.",
   uploadPhotoAgain: "Unggah ulang foto",
@@ -52,7 +53,7 @@ const id: Record<string, string> = {
   demoNoAccount: "Ini masih mode contoh.",
   demoNoAccountHint:
     "Data contoh tidak terhubung ke teman. Buat akun untuk membuat atau bergabung dengan grup nyata.",
-  demoEntry: "Coba contoh · tanpa membuat akun",
+  demoEntry: "Coba demo",
   syncLoading: "Memuat akunmu…",
   syncLoadingHint: "Sedang mengambil profil dan grup yang tersimpan.",
   syncFailed: "Belum tersinkron",
@@ -71,13 +72,10 @@ const id: Record<string, string> = {
   addAnotherGroup: "Buat grup lain",
   groupActiveHint: "Ketuk grup untuk membuka jadwalnya.",
   groupFull: "Grup ini sudah penuh.",
-  authEyebrow: "RUANG UNTUK BERSAMA",
-  authRegisterTitle: "Mulai dari\nsatu akun.",
-  authLoginTitle: "Senang kamu\nkembali.",
-  authRegisterDescription:
-    "Simpan jadwalmu. Temukan waktu untuk orang-orang yang ingin kamu temui.",
-  authLoginDescription:
-    "Masuk untuk melanjutkan jadwal, grup, dan rencana bersama temanmu.",
+  authRegisterTitle: "Buat akun Jcuki",
+  authLoginTitle: "Masuk ke Jcuki",
+  authRegisterDescription: "Simpan jadwalmu dan atur waktu bersama teman.",
+  authLoginDescription: "Buka jadwal, grup, dan rencana bersama teman.",
   authFullName: "Nama lengkap",
   authEmail: "Alamat email",
   authPassword: "Password",
@@ -87,9 +85,7 @@ const id: Record<string, string> = {
   authWorking: "Sebentar…",
   authHaveAccount: "Sudah punya akun?",
   authNeedAccount: "Belum punya akun?",
-  authPasswordHint:
-    "Gunakan minimal 8 karakter. Buat password yang hanya kamu ketahui.",
-  authPrivateHint: "Jadwalmu tersimpan di akunmu.",
+  authPasswordHint: "Minimal 8 karakter.",
   authShowPassword: "Tampilkan password",
   authHidePassword: "Sembunyikan password",
   authFullNameInvalid: "Isi nama lengkap, antara 2–80 karakter.",
@@ -109,8 +105,6 @@ const id: Record<string, string> = {
   authNetworkError:
     "Belum tersambung ke server. Periksa internetmu, lalu coba lagi.",
   authTryAgain: "Belum berhasil. Coba lagi sebentar.",
-  authErrorTitle: "Belum bisa melanjutkan",
-  authCheckAgain: "Periksa lagi",
   authAccount: "Akun saya",
   authAccountDescription: "Profil yang bisa kamu bawa ke perangkat lain.",
   authDetails: "Detail profil",
@@ -226,6 +220,7 @@ const id: Record<string, string> = {
   photoDescription: "Foto persegi akan terlihat paling rapi.",
   profileUpdated: "Profil diperbarui",
   appearance: "Tampilan",
+  theme: "Tema",
   light: "Terang",
   dark: "Gelap",
   system: "Sistem",
@@ -264,7 +259,7 @@ const id: Record<string, string> = {
     "Pengaturan aplikasi akan terbuka. Pilih Uninstall untuk menghapus JCuki.",
   about: "Tentang",
   signature: "Develop by Terrence",
-  version: "Versi 1.3.0",
+  version: "Versi",
   privacy: "Hanya hari libur dan jam bermain yang dibagikan.",
   previous: "Sebelumnya",
   next: "Berikutnya",
@@ -357,6 +352,7 @@ const id: Record<string, string> = {
 };
 const en: Record<string, string> = {
   profileUnsaved: "You have changes. Tap Save to sync them.",
+  profileUpdateFailed: "Your profile hasn’t saved. Try again.",
   photoPendingHint:
     "Photo saved on this device. Upload it to use it on other devices.",
   uploadPhotoAgain: "Retry photo upload",
@@ -408,7 +404,7 @@ const en: Record<string, string> = {
   demoNoAccount: "You’re in sample mode.",
   demoNoAccountHint:
     "Sample data doesn’t connect to friends. Create an account to create or join a real circle.",
-  demoEntry: "Try samples · no account created",
+  demoEntry: "Try demo",
   syncLoading: "Loading your account…",
   syncLoadingHint: "Fetching your saved profile and circles.",
   syncFailed: "Not synced yet",
@@ -427,13 +423,10 @@ const en: Record<string, string> = {
   addAnotherGroup: "Create another circle",
   groupActiveHint: "Tap a circle to open its schedule.",
   groupFull: "This circle is full.",
-  authEyebrow: "A LITTLE TIME TOGETHER",
-  authRegisterTitle: "Good times start\nwith your account.",
-  authLoginTitle: "Good to have\nyou back.",
-  authRegisterDescription:
-    "Keep your plans close. Make room for the people you want to see.",
-  authLoginDescription:
-    "Your schedules, circles, and shared plans are waiting for you.",
+  authRegisterTitle: "Create a Jcuki account",
+  authLoginTitle: "Log in to Jcuki",
+  authRegisterDescription: "Save your schedule and find time with friends.",
+  authLoginDescription: "Open your schedule, circles, and shared plans.",
   authFullName: "Full name",
   authEmail: "Email address",
   authPassword: "Password",
@@ -443,9 +436,7 @@ const en: Record<string, string> = {
   authWorking: "One moment…",
   authHaveAccount: "Already have an account?",
   authNeedAccount: "New to Jcuki?",
-  authPasswordHint:
-    "Use at least 8 characters. Choose a password only you know.",
-  authPrivateHint: "Your time, saved to your account.",
+  authPasswordHint: "At least 8 characters.",
   authShowPassword: "Show password",
   authHidePassword: "Hide password",
   authFullNameInvalid: "Enter your full name, between 2 and 80 characters.",
@@ -465,8 +456,6 @@ const en: Record<string, string> = {
   authNetworkError:
     "We could not reach the server. Check your connection and try again.",
   authTryAgain: "That did not work. Please try again shortly.",
-  authErrorTitle: "Let’s check that",
-  authCheckAgain: "Try again",
   authAccount: "My account",
   authAccountDescription: "A profile you can take to another device.",
   authDetails: "Profile details",
@@ -583,6 +572,7 @@ const en: Record<string, string> = {
   photoDescription: "A square photo works best.",
   profileUpdated: "Profile updated",
   appearance: "Appearance",
+  theme: "Theme",
   light: "Light",
   dark: "Dark",
   system: "System",
@@ -620,7 +610,7 @@ const en: Record<string, string> = {
   uninstallAndroid: "App settings will open. Choose Uninstall to remove JCuki.",
   about: "About",
   signature: "Develop by Terrence",
-  version: "Version 1.3.0",
+  version: "Version",
   privacy: "Only your days off and playing hours are shared.",
   previous: "Previous",
   next: "Next",
@@ -757,6 +747,7 @@ Object.assign(id, {
   chooseDay: "Pilih hari libur",
   calendarHint: "Ketuk tanggal, lalu konfirmasi bahwa kamu libur.",
   confirmDayOff: "Konfirmasi libur",
+  setDayOff: "Atur hari libur",
   confirmDayDescription:
     "Saya benar-benar libur pada tanggal ini. Jam bermain bisa diisi setelahnya.",
   dayOffSaved: "Hari libur dikonfirmasi",
@@ -817,6 +808,7 @@ Object.assign(en, {
   chooseDay: "Choose a day off",
   calendarHint: "Tap a date, then confirm that you have the day off.",
   confirmDayOff: "Confirm day off",
+  setDayOff: "Set day off",
   confirmDayDescription:
     "I really have this day off. I can add playing hours afterwards.",
   dayOffSaved: "Day off confirmed",
@@ -945,7 +937,8 @@ Object.assign(id, {
   saveDaySchedule: "Simpan libur & jam",
   calendarHint:
     "Pilih tanggal. Konfirmasi libur dan atur jam dalam satu langkah.",
-  activityTitle: "Kabar lingkaranmu",
+  activityTitle: "Aktivitas",
+  activityLoading: "Memuat aktivitas…",
   activityIntro: "Perubahan kecil, tetap terhubung.",
   plans: "Rencana",
   schedules: "Jadwal",
@@ -1004,7 +997,8 @@ Object.assign(en, {
   hoursOptionalHint: "Not sure about the hours? Confirm the day off first.",
   saveDaySchedule: "Save day off & hours",
   calendarHint: "Pick a date. Confirm your day off and set hours in one step.",
-  activityTitle: "News from your circle",
+  activityTitle: "Activity",
+  activityLoading: "Loading activity…",
   activityIntro: "Small updates. Still connected.",
   plans: "Plans",
   schedules: "Schedules",

@@ -1,5 +1,4 @@
 import { AuthProvider, useAuth } from "../auth/provider";
-import { GlassProvider } from "../components/glass";
 import { AppKeyboardProvider } from "../components/keyboard";
 import type { AppPreferences } from "../services/preferences";
 import React, { useEffect, useRef, useState, useCallback } from "react";
@@ -226,9 +225,7 @@ function AccountWorkspace() {
       onPreferences={remember}
     >
       <MotionProvider>
-        <GlassProvider>
-          <AppShell />
-        </GlassProvider>
+        <AppShell />
       </MotionProvider>
     </AppProvider>
   );

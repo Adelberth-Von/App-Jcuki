@@ -1,4 +1,5 @@
 import { useAuth } from "../../auth/provider";
+import Constants from "expo-constants";
 import React, { useState } from "react";
 import { Platform, View } from "react-native";
 import { router } from "expo-router";
@@ -40,6 +41,8 @@ export default function Settings() {
     syncStatus,
     updatePrefs,
     refresh,
+    refreshing,
+    busy,
     choosePhoto,
     deletePhoto,
     setOverlay,
@@ -49,8 +52,10 @@ export default function Settings() {
     pushStatus,
   } = useApp();
   const [testing, setTesting] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState(false);
+  const settingsBusy = busy || requestingPermission;
   const change = (p: Partial<AppPreferences>) =>
-    void updatePrefs(p).catch(() => notify("error"));
+    void updatePrefs(p).catch(() => {});
   function choice(
     title: string,
     values: [string, string][],
@@ -65,26 +70,26 @@ export default function Settings() {
       onSelect,
     });
   }
-  async function enable(v: boolean) {
+  async function updateNotifications(
+    key: "weeklyReminder" | "activityNotifications",
+    enabled: boolean,
+  ) {
+    if (settingsBusy) return;
+    setRequestingPermission(true);
     try {
-      if (v && !(await requestNotificationPermission(prefs.language))) {
+      if (enabled && !(await requestNotificationPermission(prefs.language))) {
         notify(Platform.OS === "web" ? "nativeOnly" : "notificationsDenied");
         return;
       }
-      change({ weeklyReminder: { ...prefs.weeklyReminder, enabled: v } });
+      await updatePrefs(
+        key === "weeklyReminder"
+          ? { weeklyReminder: { ...prefs.weeklyReminder, enabled } }
+          : { activityNotifications: enabled },
+      ).catch(() => {});
     } catch {
       notify("error");
-    }
-  }
-  async function enableActivity(value: boolean) {
-    try {
-      if (value && !(await requestNotificationPermission(prefs.language))) {
-        notify(Platform.OS === "web" ? "nativeOnly" : "notificationsDenied");
-        return;
-      }
-      await updatePrefs({ activityNotifications: value });
-    } catch {
-      notify("error");
+    } finally {
+      setRequestingPermission(false);
     }
   }
   async function sound() {
@@ -108,186 +113,100 @@ export default function Settings() {
     }
   }
   return (
-    <Screen title={t("settings")} description={t("support")}>
+    <Screen title={t("settings")}>
       <Card>
-        <Row>
-          <Press label={t("choosePhoto")} onPress={() => void choosePhoto()}>
-            <Avatar person={profile} size={65} />
-          </Press>
-          <View style={{ flex: 1 }}>
-            <Txt size={20} weight="bold">
-              {profile.nickname}
-            </Txt>
-            <Txt size={11} muted>
-              {zone.split("/").at(-1)?.replace(/_/g, " ")}
-            </Txt>
-          </View>
-          <Icon name="person-circle-outline" color={colors.accent} size={28} />
-        </Row>
-        <Row style={{ marginTop: 17, gap: 8 }}>
-          <Button
-            title={t("changePhoto")}
-            kind="soft"
-            icon="image-outline"
-            onPress={() => void choosePhoto()}
-            style={{ flex: 1 }}
-          />
-          <Button
-            title={t(session ? "authAccount" : "authRegister")}
-            kind="secondary"
-            onPress={() => router.push(session ? "/account" : "/register")}
-            style={{ flex: 1 }}
-          />
-        </Row>
-        {profile.avatarUri && (
-          <Button
-            title={t("removePhoto")}
-            kind="text"
-            onPress={() => void deletePhoto().catch(() => {})}
-          />
+        <Press
+          label={t(session ? "authAccount" : "authRegister")}
+          onPress={() => router.push(session ? "/account" : "/register")}
+        >
+          <Row>
+            <Avatar person={profile} size={48} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Txt size={16} weight="semibold">
+                {profile.nickname}
+              </Txt>
+              <Txt muted size={13}>
+                {t(session ? "authAccount" : "authRegister")}
+              </Txt>
+            </View>
+            <Icon name="chevron-forward" color={colors.muted} size={18} />
+          </Row>
+        </Press>
+        {!session && (
+          <Row style={{ flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            <Button
+              title={t("changePhoto")}
+              kind="text"
+              disabled={busy}
+              onPress={() => void choosePhoto()}
+            />
+            {profile.avatarUri && (
+              <Button
+                title={t("removePhoto")}
+                kind="text"
+                disabled={busy}
+                onPress={() => void deletePhoto().catch(() => {})}
+              />
+            )}
+          </Row>
         )}
       </Card>
       <Card>
-        <SectionTitle
-          title={t("appearance")}
-          description={t("appearanceHint")}
+        <SectionTitle title={t("appearance")} />
+        <SelectRow
+          label={t("theme")}
+          value={t(prefs.theme)}
+          icon="contrast-outline"
+          disabled={settingsBusy}
+          onPress={() =>
+            choice(
+              "theme",
+              [
+                ["system", "system"],
+                ["light", "light"],
+                ["dark", "dark"],
+              ],
+              prefs.theme,
+              (value) => change({ theme: value as AppPreferences["theme"] }),
+            )
+          }
         />
-        <Row style={{ gap: 8 }}>
-          {(["light", "dark", "system"] as const).map((mode) => (
-            <Press
-              key={mode}
-              label={t(mode)}
-              selected={prefs.theme === mode}
-              onPress={() => change({ theme: mode })}
-              style={{
-                flex: 1,
-                backgroundColor:
-                  prefs.theme === mode ? colors.accentSoft : colors.bg,
-                borderRadius: 15,
-                borderWidth: 1,
-                borderColor: prefs.theme === mode ? colors.accent : colors.line,
-              }}
-            >
-              <View style={{ padding: 10, alignItems: "center", gap: 10 }}>
-                <View
-                  aria-hidden
-                  style={{
-                    height: 78,
-                    width: "100%",
-                    borderRadius: 10,
-                    overflow: "hidden",
-                    flexDirection: "row",
-                  }}
-                >
-                  {(mode === "system" ? ["light", "dark"] : [mode]).map(
-                    (preview) => (
-                      <View
-                        key={preview}
-                        style={{
-                          flex: 1,
-                          padding: 8,
-                          gap: 7,
-                          backgroundColor:
-                            preview === "dark" ? "#13221E" : "#F4F6EF",
-                        }}
-                      >
-                        <View
-                          style={{
-                            height: 4,
-                            width: "55%",
-                            borderRadius: 2,
-                            backgroundColor:
-                              preview === "dark" ? "#B6C1B2" : "#6A7369",
-                          }}
-                        />
-                        <View
-                          style={{
-                            height: 24,
-                            borderRadius: 6,
-                            backgroundColor: "#42664B",
-                            padding: 6,
-                          }}
-                        >
-                          <View
-                            style={{
-                              height: 3,
-                              width: "65%",
-                              borderRadius: 2,
-                              backgroundColor: "#FCF7EB",
-                            }}
-                          />
-                        </View>
-                        <View
-                          style={{
-                            height: 15,
-                            borderRadius: 4,
-                            backgroundColor:
-                              preview === "dark" ? "#334631" : "#E8EEDF",
-                          }}
-                        />
-                      </View>
-                    ),
-                  )}
-                </View>
-                <Txt
-                  size={12}
-                  weight="semibold"
-                  color={prefs.theme === mode ? colors.accent : colors.muted}
-                >
-                  {t(mode)}
-                </Txt>
-                <Icon
-                  name={
-                    prefs.theme === mode
-                      ? "checkmark-circle"
-                      : "ellipse-outline"
-                  }
-                  size={18}
-                  color={prefs.theme === mode ? colors.accent : colors.muted}
-                />
-              </View>
-            </Press>
-          ))}
-        </Row>
-        <View style={{ marginTop: 12 }}>
-          <SelectRow
-            label={t("language")}
-            value={prefs.language === "id" ? "Bahasa Indonesia" : "English"}
-            icon="language-outline"
-            onPress={() =>
-              setOverlay({
-                kind: "choice",
-                title: t("language"),
-                choices: [
-                  { value: "id", label: "Bahasa Indonesia" },
-                  { value: "en", label: "English" },
-                ],
-                value: prefs.language,
-                onSelect: (v) => change({ language: v as "id" | "en" }),
-              })
-            }
-          />
-        </View>
+        <Divider />
+        <SelectRow
+          label={t("language")}
+          value={prefs.language === "id" ? "Bahasa Indonesia" : "English"}
+          icon="language-outline"
+          disabled={settingsBusy}
+          onPress={() =>
+            setOverlay({
+              kind: "choice",
+              title: t("language"),
+              choices: [
+                { value: "id", label: "Bahasa Indonesia" },
+                { value: "en", label: "English" },
+              ],
+              value: prefs.language,
+              onSelect: (value) =>
+                change({ language: value as AppPreferences["language"] }),
+            })
+          }
+        />
       </Card>
       <Card>
-        <SectionTitle
-          title={t("timeRegion")}
-          description={t("zoneDescription")}
-        />
-        <Row>
-          <Icon name="globe-outline" color={colors.accent} />
+        <SectionTitle title={t("timeRegion")} />
+        <Row style={{ paddingVertical: 12 }}>
+          <Icon name="globe-outline" color={colors.muted} />
           <View style={{ flex: 1, gap: 4 }}>
-            <Txt weight="semibold">{t("autoZone")}</Txt>
-            <Txt muted>{zone.replace(/_/g, " ")}</Txt>
-            <Txt size={12} muted>
-              {t("zoneAutomaticHint")}
+            <Txt weight="semibold">{t("timeZone")}</Txt>
+            <Txt muted size={13}>
+              {zone.replace(/_/g, " ")}
             </Txt>
           </View>
-          <Icon name="checkmark-circle" color={colors.accent} />
         </Row>
         <Divider />
         <SelectRow
           label={t("timeFormat")}
+          disabled={settingsBusy}
           value={t(prefs.timeFormat === "24h" ? "h24" : "h12")}
           icon="time-outline"
           onPress={() =>
@@ -309,7 +228,10 @@ export default function Settings() {
           label={t("activityNotifications")}
           description={t("activityNotificationHint")}
           value={prefs.activityNotifications}
-          onChange={(value) => void enableActivity(value)}
+          disabled={settingsBusy}
+          onChange={(value) =>
+            void updateNotifications("activityNotifications", value)
+          }
         />
         {prefs.activityNotifications && (
           <View style={{ marginVertical: 10 }}>
@@ -324,13 +246,16 @@ export default function Settings() {
           label={t("weeklyReminder")}
           description={t("weeklyDescription")}
           value={prefs.weeklyReminder.enabled}
-          onChange={(v) => void enable(v)}
+          disabled={settingsBusy}
+          onChange={(value) =>
+            void updateNotifications("weeklyReminder", value)
+          }
         />
-        <Divider />
         {prefs.weeklyReminder.enabled && (
           <>
             <SelectRow
               label={t("reminderDay")}
+              disabled={settingsBusy}
               value={t("weekday" + (prefs.weeklyReminder.weekday - 1))}
               onPress={() =>
                 choice(
@@ -373,23 +298,20 @@ export default function Settings() {
         <Divider />
         <ToggleRow
           label={t("notificationSound")}
-          description={t("soundDescription")}
           value={prefs.notificationSound}
+          disabled={settingsBusy}
           onChange={(v) => change({ notificationSound: v })}
         />
         <Button
           title={t("testSound")}
           kind="soft"
           icon="musical-notes-outline"
-          disabled={testing}
+          disabled={testing || requestingPermission}
           onPress={() => void sound()}
         />
       </Card>
       <Card>
-        <SectionTitle
-          title={t("widget")}
-          description={t("widgetDescription")}
-        />
+        <SectionTitle title={t("widget")} />
         <ToggleRow
           label={t("widgetDashboard")}
           value={widgetEnabled}
@@ -412,89 +334,71 @@ export default function Settings() {
           {t("widgetHelp")}
         </Txt>
       </Card>
-      <Card>
-        <SectionTitle title={t("connection")} />
-        <Row between style={{ marginBottom: 10 }}>
-          <Pill
-            label={
-              demoMode
-                ? t("demoMode")
-                : syncStatus === "loading"
-                  ? t("syncLoading")
-                  : syncStatus === "error"
-                    ? t("syncFailed")
-                    : t("syncReady")
-            }
-            tone={
-              demoMode || offline || syncStatus !== "ready" ? "peach" : "green"
-            }
-          />
-          <Icon name="cloud-outline" color={colors.muted} />
-        </Row>
-        <Txt size={11} muted>
-          {apiUrl ? t("connectionReadyHint") : t("apiEmpty")}
-        </Txt>
-        <Button
-          title={demoMode ? t("authRegister") : t("refresh")}
-          kind="secondary"
-          style={{ marginTop: 14 }}
-          onPress={() => (demoMode ? router.push("/register") : void refresh())}
-        />
-        <Txt size={10} muted style={{ marginTop: 12 }}>
-          {t("deviceIdentity")}
-        </Txt>
-      </Card>
+      {!demoMode && (
+        <Card>
+          <SectionTitle title={t("connection")} />
+          <View style={{ gap: 12 }}>
+            <Pill
+              label={t(
+                syncStatus === "loading" || refreshing
+                  ? "syncLoading"
+                  : syncStatus === "error" || offline
+                    ? "syncFailed"
+                    : "syncReady",
+              )}
+              tone={offline || syncStatus !== "ready" ? "peach" : "green"}
+            />
+            {!apiUrl && <Txt muted>{t("apiEmpty")}</Txt>}
+            <Button
+              title={t("refresh")}
+              kind="secondary"
+              disabled={refreshing || busy}
+              onPress={() => void refresh()}
+            />
+          </View>
+        </Card>
+      )}
       <Card>
         <SectionTitle title={t("about")} />
-        <Row>
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 15,
-              backgroundColor: colors.accentSoft,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="link" color={colors.accent} size={29} />
-          </View>
-          <View>
-            <Txt size={18} weight="bold">
-              JCuki
+        <View style={{ gap: 8 }}>
+          <Txt weight="semibold">JCuki</Txt>
+          {Constants.expoConfig?.version && (
+            <Txt size={13} muted>
+              {t("version")} {Constants.expoConfig.version}
             </Txt>
-            <Txt size={11} muted>
-              {t("version")}
-            </Txt>
-          </View>
-        </Row>
-        <Txt size={12} muted style={{ marginTop: 14 }}>
-          {t("privacy")}
-        </Txt>
-        <Txt size={12} weight="semibold" style={{ marginTop: 14 }}>
-          {t("signature")}
-        </Txt>
+          )}
+          <Txt size={13} muted>
+            {t("privacy")}
+          </Txt>
+          <Txt size={13} muted>
+            {t("signature")}
+          </Txt>
+        </View>
+        <Button
+          title={t("uninstall")}
+          kind="text"
+          icon="trash-outline"
+          textColor={colors.danger}
+          onPress={() =>
+            setOverlay({
+              kind: "confirm",
+              title: t("uninstall"),
+              description: t(
+                Platform.OS === "ios" ? "uninstallIOS" : "uninstallAndroid",
+              ),
+              onConfirm: async () => {
+                try {
+                  const result = await openUninstallSettings();
+                  if (result === "preview") notify("nativeOnly");
+                  setOverlay(null);
+                } catch {
+                  notify("error");
+                }
+              },
+            })
+          }
+        />
       </Card>
-      <Button
-        title={t("uninstall")}
-        kind="danger"
-        icon="trash-outline"
-        onPress={() =>
-          setOverlay({
-            kind: "confirm",
-            title: t("uninstall"),
-            description: t(
-              Platform.OS === "ios" ? "uninstallIOS" : "uninstallAndroid",
-            ),
-            onConfirm: async () => {
-              const result = await openUninstallSettings();
-              if (result === "preview") notify("nativeOnly");
-              setOverlay(null);
-            },
-          })
-        }
-      />
-      <View style={{ height: 10 }} />
     </Screen>
   );
 }

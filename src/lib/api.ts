@@ -141,12 +141,20 @@ export function createApiClient({
         });
       let response = await send(false);
       if (response.status === 401) response = await send(true);
-      const data = await response.json().catch(() => ({}));
+      const parsed: unknown = await response.json().catch((error) => {
+        if (controller.signal.aborted) throw error;
+        return null;
+      });
+      const data =
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : null;
       if (!response.ok)
         throw new APIError(
-          typeof data.error === "string" ? data.error : "SERVER_ERROR",
+          typeof data?.error === "string" ? data.error : "SERVER_ERROR",
           response.status,
         );
+      if (!data) throw new APIError("INVALID_SERVER_RESPONSE", response.status);
       return data as T;
     } catch (error) {
       if (error instanceof APIError) throw error;
